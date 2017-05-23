@@ -4,12 +4,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import com.sun.org.apache.xml.internal.utils.IntVector;
+
 import apron.Abstract1;
 import apron.ApronException;
 import apron.Environment;
+import apron.Linexpr1;
 import apron.Manager;
 import apron.Polka;
-
 import soot.IntegerType;
 import soot.Local;
 import soot.SootClass;
@@ -18,6 +20,7 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.IfStmt;
+import soot.jimple.IntConstant;
 import soot.jimple.Stmt;
 import soot.jimple.internal.JIfStmt;
 import soot.jimple.internal.JimpleLocal;
@@ -127,6 +130,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	}
 
 	void run() {
+		System.out.println("\n[DEBUG] Starting analysis...");
 		doAnalysis();
 	}
 
@@ -137,13 +141,36 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		Stmt s = (Stmt) op;
 
 		// Debug information
-		System.out.println("[DEBUG] " + (s.toString()));
+		System.out.println("[DEBUG] " + s);
 		
 		if (s instanceof DefinitionStmt) {
 			DefinitionStmt sd = (DefinitionStmt) s;
 			Value lhs = sd.getLeftOp();
 			Value rhs = sd.getRightOp();
-			/* TODO: handle assignment */
+			
+			// Check if variable is known
+			if(!env.hasVar(lhs.toString())){
+				System.out.println("[DEBUG] " + lhs + " is not a known variable\n");
+				return;
+			}
+			
+			// Create linear expression for assignment
+			Linexpr1 rhsExpression = new Linexpr1(env, 0); //dummy for compiling
+			if (rhs instanceof IntConstant){
+				IntConstant rhsConstant = (IntConstant) rhs;
+				rhsExpression = new Linexpr1(env, rhsConstant.value);
+				
+			}
+			
+			// Assign value to lhs
+			System.out.println("[DEBUG] Assigning ??? to " + lhs);
+			AWrapper outWrapper = new AWrapper(inWrapper.elem);
+			try {
+				outWrapper.elem.assign(man, lhs.toString(), rhsExpression, null);
+			} catch (ApronException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			
 
 		} else if (s instanceof JIfStmt) {
@@ -151,6 +178,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			/* TODO: handle if statement */
 			
 		}
+		System.out.println();
 	}
 
 	@Override

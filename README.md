@@ -1,3 +1,4 @@
 # SAE-Project2
 Project 2 for Software Architecture &amp; Engineering
-d
+
+Because everyone loves java and having to work in a VM with 10 fps <3
