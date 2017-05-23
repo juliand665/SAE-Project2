@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="soot-2.5.0.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/home/sae/apron/japron/apron.jar"/>
-	<classpathentry kind="lib" path="/home/sae/apron/japron/gmp.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.launching.macosx.MacOSXType/Java SE 6 [1.6.0_65-b14-468]"/>
+	<classpathentry kind="lib" path="lib/soot-2.5.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="https://soot-build.cs.uni-paderborn.de/doc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/apron.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.srl.inf.ethz.ch/sae2016/doc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/gmp.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.srl.inf.ethz.ch/sae2016/doc/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
