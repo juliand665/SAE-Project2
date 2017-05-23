@@ -136,6 +136,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 		Stmt s = (Stmt) op;
 
+		System.out.println(s);
 		if (s instanceof DefinitionStmt) {
 			DefinitionStmt sd = (DefinitionStmt) s;
 			Value lhs = sd.getLeftOp();
