@@ -136,15 +136,20 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 		Stmt s = (Stmt) op;
 
+		// Debug information
+		System.out.println("[DEBUG] " + (s.toString()));
+		
 		if (s instanceof DefinitionStmt) {
 			DefinitionStmt sd = (DefinitionStmt) s;
 			Value lhs = sd.getLeftOp();
 			Value rhs = sd.getRightOp();
 			/* TODO: handle assignment */
+			
 
 		} else if (s instanceof JIfStmt) {
 			IfStmt ifStmt = (JIfStmt) s;
-			/* TODO: handle if statement*/
+			/* TODO: handle if statement */
+			
 		}
 	}
 
