@@ -1,26 +1,11 @@
 package ch.ethz.sae;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
-import apron.Abstract1;
-import apron.ApronException;
-import apron.Environment;
-import apron.Manager;
-import apron.Polka;
-
-import soot.IntegerType;
-import soot.Local;
-import soot.SootClass;
-import soot.SootField;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.DefinitionStmt;
-import soot.jimple.IfStmt;
-import soot.jimple.Stmt;
-import soot.jimple.internal.JIfStmt;
-import soot.jimple.internal.JimpleLocal;
+import apron.*;
+import soot.*;
+import soot.jimple.*;
+import soot.jimple.internal.*;
 import soot.jimple.toolkits.annotation.logic.Loop;
 import soot.toolkits.graph.LoopNestTree;
 import soot.toolkits.graph.UnitGraph;
@@ -88,6 +73,9 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		recordIntLocalVars();
 		recordIntClassVars();
 
+		log("local vars:", Arrays.toString(local_ints));
+		log("class vars:", Arrays.toString(class_ints));
+
 		String ints[] = new String[local_ints.length + class_ints.length];
 
 		/* add local ints */
@@ -130,21 +118,107 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		doAnalysis();
 	}
 
+	public static final boolean LOG_DEBUG = true;
+
+	private void log(Object... objs) {
+		if (LOG_DEBUG) {
+			System.out.print("[Debug] ");
+			for (Object o : objs)
+				System.out.print(o + " ");
+			System.out.println();
+		}
+	}
+
+	private void failedConversion(Value value, String dest) {
+		log("Couldn't convert value of type", value.getClass(), "to", dest);
+	}
+
+	private int getOp(BinopExpr bin) {
+		if (bin instanceof JAddExpr) return Texpr1BinNode.OP_ADD;
+		if (bin instanceof JSubExpr) return Texpr1BinNode.OP_SUB;
+		if (bin instanceof JMulExpr) return Texpr1BinNode.OP_MUL;
+		if (bin instanceof JDivExpr) return Texpr1BinNode.OP_DIV;
+		failedConversion(bin, "op");
+		return -1;
+	}
+
+	private Texpr1Node toExpr(Value value) {
+		if (value instanceof BinopExpr) {
+			BinopExpr bin = (BinopExpr) value;
+			int op = getOp(bin);
+			Texpr1Node l = toExpr(bin.getOp1());
+			Texpr1Node r = toExpr(bin.getOp2());
+			return new Texpr1BinNode(op, l, r);
+		}
+		if (value instanceof IntConstant) {
+			int val = ((IntConstant) value).value;
+			return new Texpr1CstNode(new MpqScalar(val));
+		}
+		if (value instanceof JimpleLocal) {
+			String name = ((JimpleLocal) value).getName();
+			return new Texpr1VarNode(name);
+		}
+		if (value instanceof ParameterRef) {
+			int index = ((ParameterRef) value).getIndex();
+			// TODO
+		}
+		failedConversion(value, "expr");
+		return null;
+	}
+
 	@Override
-	protected void flowThrough(AWrapper inWrapper, Unit op,
-			List<AWrapper> fallOutWrappers, List<AWrapper> branchOutWrappers) {
+	protected void flowThrough(AWrapper in, Unit op,
+			List<AWrapper> fallOut, List<AWrapper> branchOut) {
 
 		Stmt s = (Stmt) op;
 
-		if (s instanceof DefinitionStmt) {
-			DefinitionStmt sd = (DefinitionStmt) s;
-			Value lhs = sd.getLeftOp();
-			Value rhs = sd.getRightOp();
-			/* TODO: handle assignment */
+		try {
+			log("\t", op, "---", in, "->", fallOut, "+", branchOut);
+		} catch (Exception e) {
+			log("Error while trying to log:", e);
+		}
 
-		} else if (s instanceof JIfStmt) {
-			IfStmt ifStmt = (JIfStmt) s;
-			/* TODO: handle if statement*/
+		try {
+			Abstract1 fall = new Abstract1(man, in.get());
+			Abstract1 branch = new Abstract1(man, in.get());
+
+			if (s instanceof DefinitionStmt) {
+				DefinitionStmt def = (DefinitionStmt) s;
+				Value lhs = def.getLeftOp(), rhs = def.getRightOp();
+				log("Definition of", lhs, "(" + lhs.getClass() + ")", "as", rhs, "(" + rhs.getClass() + ")");
+				String var = ((JimpleLocal) lhs).getName();
+				Texpr1Node expr = toExpr(rhs);
+				//log("expr:", expr);
+				if (expr != null) {
+					Texpr1Intern val = new Texpr1Intern(env, toExpr(rhs));
+					try {
+					fall.assign(man, var, val, null);
+					branch.assign(man, var, val, null);
+					} catch (IllegalArgumentException e) {
+						log("Illegal argument to assign:", var, "(don't worry unless this was an int)");
+					}
+				}
+			} else if (s instanceof JIfStmt) {
+				IfStmt jIf = (JIfStmt) s;
+				/* TODO: handle if statement
+				ConditionExpr cond = (ConditionExpr) ifStmt.getCondition();
+				log(cond.getSymbol());
+				log(cond.getSymbol().getClass());
+				log(cond.getOp1());
+				log(cond.getOp1().getClass());
+				log(cond.getOp2());
+				log(cond.getOp2().getClass());
+				fallOutWrappers.get(0).get();//.meet(man, ); */
+			}
+
+			for (AWrapper out : fallOut)
+				out.set(fall);
+			for (AWrapper out : branchOut)
+				out.set(branch);
+
+		} catch (Exception e) {
+			log("Exception in flowThrough:", e);
+			//e.printStackTrace();
 		}
 	}
 
