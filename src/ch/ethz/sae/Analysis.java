@@ -180,15 +180,11 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		if (verbose) log("expr:", expr);
 
 		if (expr != null) {
-			try {
-				Texpr1Intern val = new Texpr1Intern(env, expr); // value to assign
-				// apply to state (TODO better word for state?)
-				fall.assign(man, var, val, null);
-				branch.assign(man, var, val, null);
-			} catch (IllegalArgumentException e) {
-				if (verbose) log("     Unrecognized local variable:", var, "(don't worry unless this was an int)");
-			}
-		}
+			Texpr1Intern val = new Texpr1Intern(env, expr); // value to assign
+			// apply to state (TODO better word for state?)
+			fall.assign(man, var, val, null);
+			branch.assign(man, var, val, null);
+		} // we can ignore anything not parsed by toExpr
 	}
 
 	/// computes the output states of applying an if statement (TODO better word for state?)
@@ -202,23 +198,24 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		if (verbose) log(cond.getClass(), cond.getOp1().getClass(), cond.getOp2().getClass());
 
 		// parse (in-)equality for easier logic later in toConstraint
-		boolean equality = cond instanceof JEqExpr || cond instanceof JNeExpr;
-		boolean strict = cond instanceof JGtExpr || cond instanceof JLtExpr;
-		boolean negated = cond instanceof JNeExpr || cond instanceof JLeExpr || cond instanceof JLtExpr;
+		boolean equality = cond instanceof JEqExpr || cond instanceof JNeExpr; // ==, !=
+		boolean strict = cond instanceof JGtExpr || cond instanceof JLtExpr; // >, <
+		boolean negated = cond instanceof JNeExpr || cond instanceof JLeExpr || cond instanceof JLtExpr; // !=, <=, <
 		if (verbose) log("=", equality, "//", "</>", strict, "//", "!", negated);
-		
+
 		// convert to constraints for un-/fulfilment
 		Tcons1 tCons = toConstraint(l, r, equality, strict, negated);
 		Tcons1 fCons = toConstraint(l, r, equality, !strict, !negated);
 		if (verbose) log("true:", tCons, "//", "false:", fCons);
-		
+
 		// apply to state (TODO better word for state?)
-		fall.meet(man, tCons);
-		branch.meet(man, fCons);
+		branch.meet(man, tCons);
+		fall.meet(man, fCons);
 	}
-	
+
 	// converts an (in-)equality of a given type to a Tcons1 linear constraint (e.g. l >= r -> l-r >= 0; l < r -> r-l > 0 -> r-l-1 >= 0)
 	private Tcons1 toConstraint(Texpr1Node l, Texpr1Node r, boolean equality, boolean strict, boolean negated) {
+		// if negated, constrain r-l, otherwise l-r
 		Texpr1BinNode sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, negated ? r : l, negated ? l : r);
 		int cons;
 		if (equality)
@@ -237,7 +234,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 		// debug output
 		try {
-			log("  ", op, "---", in, "->", fallOut, "+", branchOut);
+			log("  ", op, "-----", in, "->", fallOut, "+", branchOut);
 		} catch (Exception e) {
 			log("Error while trying to log:", e);
 		}
@@ -247,10 +244,15 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			Abstract1 branch = new Abstract1(man, in.get());
 
 			// parse statement
-			if (s instanceof DefinitionStmt) {
-				applyDef((DefinitionStmt) s, fall, branch);
-			} else if (s instanceof JIfStmt) {
-				applyIf((JIfStmt) s, fall, branch);
+			try {
+				if (s instanceof DefinitionStmt) {
+					applyDef((DefinitionStmt) s, fall, branch);
+				} else if (s instanceof JIfStmt) {
+					applyIf((JIfStmt) s, fall, branch);
+				}
+			} catch (IllegalArgumentException e) {
+				// This mostly happens when variables aren't defined in our environment, which (hopefully) means we don't care about them.
+				log("     Illegal argument given (don't worry unless this was an int):", e);
 			}
 
 			// apply to wrappers
@@ -262,7 +264,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			log("     fall through:", fallOut, "branch:", branchOut);
 
 		} catch (ApronException e) {
-			log("Exception in flowThrough:", e);
+			log("ApronException in flowThrough:", e);
 			//e.printStackTrace();
 		}
 	}
