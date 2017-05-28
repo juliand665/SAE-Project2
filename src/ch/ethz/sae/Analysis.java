@@ -120,6 +120,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 	public static final boolean LOG_DEBUG = true;
 
+	// helper function for debug output
 	private void log(Object... objs) {
 		if (LOG_DEBUG) {
 			System.out.print("[Debug] ");
@@ -129,19 +130,22 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		}
 	}
 
+	// debug output for uncaught conversion cases
 	private void failedConversion(Value value, String dest) {
-		log("Couldn't convert value of type", value.getClass(), "to", dest);
+		log("     Couldn't convert value of type", value.getClass(), "to", dest);
 	}
 
+	// extracts the (arithmetic) operation of a Soot binary expression
 	private int getOp(BinopExpr bin) {
 		if (bin instanceof JAddExpr) return Texpr1BinNode.OP_ADD;
 		if (bin instanceof JSubExpr) return Texpr1BinNode.OP_SUB;
 		if (bin instanceof JMulExpr) return Texpr1BinNode.OP_MUL;
-		if (bin instanceof JDivExpr) return Texpr1BinNode.OP_DIV;
+		// not even supposed to handle this: if (bin instanceof JDivExpr) return Texpr1BinNode.OP_DIV;
 		failedConversion(bin, "op");
 		return -1;
 	}
 
+	// converts a Soot expression (Value) to an Apron expression (Texpr1Node)
 	private Texpr1Node toExpr(Value value) {
 		if (value instanceof BinopExpr) {
 			BinopExpr bin = (BinopExpr) value;
@@ -158,12 +162,71 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			String name = ((JimpleLocal) value).getName();
 			return new Texpr1VarNode(name);
 		}
-		if (value instanceof ParameterRef) {
-			int index = ((ParameterRef) value).getIndex();
-			// TODO
-		}
-		failedConversion(value, "expr");
+		// this is fine - failedConversion(value, "expr");
 		return null;
+	}
+
+	/// computes the output states of applying a definition statement (TODO better word for state?)
+	private void applyDef(DefinitionStmt def, Abstract1 fall, Abstract1 branch) throws ApronException {
+		final boolean verbose = false;
+
+		// split into operands
+		Value lhs = def.getLeftOp(), rhs = def.getRightOp();
+		if (verbose) log("Definition of", lhs, "(" + lhs.getClass() + ")", "as", rhs, "(" + rhs.getClass() + ")");
+
+		// parse expressions on either side
+		String var = ((JimpleLocal) lhs).getName(); // local variable to assign to
+		Texpr1Node expr = toExpr(rhs);
+		if (verbose) log("expr:", expr);
+
+		if (expr != null) {
+			try {
+				Texpr1Intern val = new Texpr1Intern(env, expr); // value to assign
+				// apply to state (TODO better word for state?)
+				fall.assign(man, var, val, null);
+				branch.assign(man, var, val, null);
+			} catch (IllegalArgumentException e) {
+				if (verbose) log("     Unrecognized local variable:", var, "(don't worry unless this was an int)");
+			}
+		}
+	}
+
+	/// computes the output states of applying an if statement (TODO better word for state?)
+	private void applyIf(JIfStmt jIf, Abstract1 fall, Abstract1 branch) throws ApronException {
+		final boolean verbose = true;
+
+		// parse expressions on either side
+		ConditionExpr cond = (ConditionExpr) jIf.getCondition();
+		Texpr1Node l = toExpr(cond.getOp1());
+		Texpr1Node r = toExpr(cond.getOp2());
+		if (verbose) log(cond.getClass(), cond.getOp1().getClass(), cond.getOp2().getClass());
+
+		// parse (in-)equality for easier logic later in toConstraint
+		boolean equality = cond instanceof JEqExpr || cond instanceof JNeExpr;
+		boolean strict = cond instanceof JGtExpr || cond instanceof JLtExpr;
+		boolean negated = cond instanceof JNeExpr || cond instanceof JLeExpr || cond instanceof JLtExpr;
+		if (verbose) log("=", equality, "//", "</>", strict, "//", "!", negated);
+		
+		// convert to constraints for un-/fulfilment
+		Tcons1 tCons = toConstraint(l, r, equality, strict, negated);
+		Tcons1 fCons = toConstraint(l, r, equality, !strict, !negated);
+		if (verbose) log("true:", tCons, "//", "false:", fCons);
+		
+		// apply to state (TODO better word for state?)
+		fall.meet(man, tCons);
+		branch.meet(man, fCons);
+	}
+	
+	// converts an (in-)equality of a given type to a Tcons1 linear constraint (e.g. l >= r -> l-r >= 0; l < r -> r-l > 0 -> r-l-1 >= 0)
+	private Tcons1 toConstraint(Texpr1Node l, Texpr1Node r, boolean equality, boolean strict, boolean negated) {
+		Texpr1BinNode sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, negated ? r : l, negated ? l : r);
+		int cons;
+		if (equality)
+			cons = negated ? Tcons1.DISEQ : Tcons1.EQ;
+		else
+			cons = strict ? Tcons1.SUP : Tcons1.SUPEQ;
+		// something not to be confused by: SUP is just SUPEQ with the bound adjusted by one
+		return new Tcons1(env, cons, sub);
 	}
 
 	@Override
@@ -172,8 +235,9 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 		Stmt s = (Stmt) op;
 
+		// debug output
 		try {
-			log("\t", op, "---", in, "->", fallOut, "+", branchOut);
+			log("  ", op, "---", in, "->", fallOut, "+", branchOut);
 		} catch (Exception e) {
 			log("Error while trying to log:", e);
 		}
@@ -182,41 +246,22 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			Abstract1 fall = new Abstract1(man, in.get());
 			Abstract1 branch = new Abstract1(man, in.get());
 
+			// parse statement
 			if (s instanceof DefinitionStmt) {
-				DefinitionStmt def = (DefinitionStmt) s;
-				Value lhs = def.getLeftOp(), rhs = def.getRightOp();
-				log("Definition of", lhs, "(" + lhs.getClass() + ")", "as", rhs, "(" + rhs.getClass() + ")");
-				String var = ((JimpleLocal) lhs).getName();
-				Texpr1Node expr = toExpr(rhs);
-				//log("expr:", expr);
-				if (expr != null) {
-					Texpr1Intern val = new Texpr1Intern(env, toExpr(rhs));
-					try {
-					fall.assign(man, var, val, null);
-					branch.assign(man, var, val, null);
-					} catch (IllegalArgumentException e) {
-						log("Illegal argument to assign:", var, "(don't worry unless this was an int)");
-					}
-				}
+				applyDef((DefinitionStmt) s, fall, branch);
 			} else if (s instanceof JIfStmt) {
-				IfStmt jIf = (JIfStmt) s;
-				/* TODO: handle if statement
-				ConditionExpr cond = (ConditionExpr) ifStmt.getCondition();
-				log(cond.getSymbol());
-				log(cond.getSymbol().getClass());
-				log(cond.getOp1());
-				log(cond.getOp1().getClass());
-				log(cond.getOp2());
-				log(cond.getOp2().getClass());
-				fallOutWrappers.get(0).get();//.meet(man, ); */
+				applyIf((JIfStmt) s, fall, branch);
 			}
 
+			// apply to wrappers
 			for (AWrapper out : fallOut)
 				out.set(fall);
 			for (AWrapper out : branchOut)
 				out.set(branch);
 
-		} catch (Exception e) {
+			log("     fall through:", fallOut, "branch:", branchOut);
+
+		} catch (ApronException e) {
 			log("Exception in flowThrough:", e);
 			//e.printStackTrace();
 		}
