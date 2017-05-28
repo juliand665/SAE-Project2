@@ -189,7 +189,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 	/// computes the output states of applying an if statement (TODO better word for state?)
 	private void applyIf(JIfStmt jIf, Abstract1 fall, Abstract1 branch) throws ApronException {
-		final boolean verbose = true;
+		final boolean verbose = false;
 
 		// parse expressions on either side
 		ConditionExpr cond = (ConditionExpr) jIf.getCondition();
@@ -252,7 +252,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 				}
 			} catch (IllegalArgumentException e) {
 				// This mostly happens when variables aren't defined in our environment, which (hopefully) means we don't care about them.
-				log("     Illegal argument given (don't worry unless this was an int):", e);
+				log("     Statement ignored! Illegal argument given (don't worry unless this was an int):", e);
 			}
 
 			// apply to wrappers
@@ -261,7 +261,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			for (AWrapper out : branchOut)
 				out.set(branch);
 
-			log("     fall through:", fallOut, "branch:", branchOut);
+			log("     Fall through:", fallOut, "Branch:", branchOut);
 
 		} catch (ApronException e) {
 			log("ApronException in flowThrough:", e);
