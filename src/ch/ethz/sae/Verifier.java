@@ -71,7 +71,7 @@ public class Verifier {
     }
 
     private static boolean verifyWeldBetween(SootMethod method, Analysis fixPoint, PAG pointsTo) {
-    	/* TODO: check whether all calls to weldBetween respect Property 2 */
+    	// TODO: change to using hashmaps just as in weldAt, avoid duplicated code
     	System.out.println("\nVerify WeldBetween");
     	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
     	
@@ -111,7 +111,6 @@ public class Verifier {
     			intervalLeft = a.elem.getBound(a.man, weldLeftName);
     			intervalRight = a.elem.getBound(a.man, weldRightName);
 			} catch (ApronException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			System.out.println("\t\tPossible values for " + weldLeftName + ": " + intervalLeft);
@@ -125,7 +124,6 @@ public class Verifier {
 				satisfiesLeftConstraint = a.elem.satisfy(a.man, weldLeftName, constraintsInterval);
 				satisfiesRightConstraint = a.elem.satisfy(a.man, weldRightName, constraintsInterval);
 			} catch (ApronException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			System.out.println("\t\tIs " + intervalLeft + " in " + constraintsInterval + ": " + satisfiesLeftConstraint);
@@ -141,11 +139,12 @@ public class Verifier {
     }
 
     private static boolean verifyWeldAt(SootMethod method, Analysis fixPoint, PAG pointsTo) {
-    	/* TODO: check whether all calls to weldAt respect Property 1 */
+    	// TODO: change to be able to use multiple robots (hashmap)
     	System.out.println("\nVerify WeldAt");
     	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
     	
     	// get arguments
+    	// TODO: change output of getRobotsConstraint to hashmap<robot_id, interval>
     	Value[] weldConstraints = getRobotConstraints(ops);
     	int weldLeftConstraint = ((IntConstant)weldConstraints[0]).value;
     	int weldRightConstraint = ((IntConstant)weldConstraints[1]).value;;
@@ -153,6 +152,7 @@ public class Verifier {
     	System.out.println("\t" + "Robot is allowed to weld between " + weldLeftConstraint + " and " + weldRightConstraint);
     	
     	// search for all calls to weldAt
+    	// TODO: change output to hashmap<robot_id, JInvokeStmt>
     	LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldAt");
 
     	// check constraints
@@ -170,13 +170,13 @@ public class Verifier {
     		
 
     		// get interval for the position variable
+    		// TODO: update to using hasmap, only cosmetical
     		AWrapper a = fixPoint.getFlowBefore(stmt);
     		System.out.println("\t\tAbstract domain: " + a);
     		Interval positionInterval = null;
     		try {
     			positionInterval = a.elem.getBound(a.man, weldPositionName);
 			} catch (ApronException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			System.out.println("\t\tPossible domain for " + weldPositionName + ": " + positionInterval);
@@ -185,9 +185,9 @@ public class Verifier {
 			// test interval against constraints
 			boolean satisfiesConstraint = false;
 			try {
+				// TODO: find robot associated with the JInvokeStmt and change constrainsInterval accordingly
 				satisfiesConstraint = a.elem.satisfy(a.man, weldPositionName, constraintsInterval);
 			} catch (ApronException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			System.out.println("\t\tIs " + weldPositionName + " in " + constraintsInterval + ": " + satisfiesConstraint + "\n");
@@ -238,7 +238,8 @@ public class Verifier {
     	
     	LinkedList<JInvokeStmt> stmts = new LinkedList<JInvokeStmt>();
     	for(Unit op : ops){
-    		if(op.toString().contains(stmt)){
+    		// not perfect and still breakable (System.out.println("Robot: void weldAt");), but good enough
+    		if(op.toString().contains("Robot: void " + stmt)){
     			stmts.add((JInvokeStmt) op);
     		}
     	}
