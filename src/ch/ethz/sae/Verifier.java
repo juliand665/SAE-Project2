@@ -28,7 +28,7 @@ public class Verifier {
             System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
             System.exit(-1);
         }
-        String analyzedClass = "Test_6";
+        String analyzedClass = "Test_7";
         SootClass c = loadClass(analyzedClass);
 
         PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -179,7 +179,7 @@ public class Verifier {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			System.out.println("\t\tPossible values for " + weldPositionName + ": " + positionInterval);
+			System.out.println("\t\tPossible domain for " + weldPositionName + ": " + positionInterval);
     		
 			
 			// test interval against constraints
