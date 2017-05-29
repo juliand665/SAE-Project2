@@ -1,7 +1,13 @@
 package ch.ethz.sae;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 
+import apron.Abstract1;
+import apron.ApronException;
+import apron.DoubleScalar;
+import apron.Interval;
+import apron.Scalar;
 import soot.jimple.internal.ImmediateBox;
 import soot.jimple.internal.JInvokeStmt;
 import soot.jimple.spark.SparkTransformer;
@@ -13,6 +19,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.toolkits.graph.BriefUnitGraph;
+import soot.jimple.*;
 
 public class Verifier {
 
@@ -21,7 +28,7 @@ public class Verifier {
             System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
             System.exit(-1);
         }
-        String analyzedClass = args[0];
+        String analyzedClass = "Test_5";
         SootClass c = loadClass(analyzedClass);
 
         PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -65,12 +72,68 @@ public class Verifier {
     	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
     	
     	// get arguments
-    	Value[] weldBorders = getArguments(ops);
-    	Value weldLeft = weldBorders[0];
-    	Value weldRight = weldBorders[1];
-    	System.out.println("Robot needs to weld between " + weldLeft + " and " + weldRight);
+    	Value[] weldConstraints = getRobotConstraints(ops);
+    	int weldLeftConstraint = ((IntConstant)weldConstraints[0]).value;
+    	int weldRightConstraint = ((IntConstant)weldConstraints[1]).value;;
+    	Interval constraintsInterval = new Interval(weldLeftConstraint, weldRightConstraint);
+    	System.out.println("\t" + "Robot needs to weld between " + weldLeftConstraint + " and " + weldRightConstraint);
     	
-        return false;
+    	// search for all calls to weldBetween
+    	LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldBetween");
+    	
+    	// check constraints
+    	System.out.println("\tCheck constraints...");
+    	boolean checkAllConstraints = true;
+    	for(JInvokeStmt stmt : invokeCalls){
+    		// get variable names
+    		String weldLeftName = null, weldRightName = null;
+    		for(Object s : stmt.getUseBoxes()){
+    			if(s instanceof ImmediateBox){
+    				if(weldLeftName == null){
+    					weldLeftName = ((ImmediateBox) s).getValue().toString();
+    				}else{
+    					weldRightName = ((ImmediateBox) s).getValue().toString();
+    				}
+    			}
+    		}
+    		System.out.println("\t\tRobot will weld between " + weldLeftName + " and " + weldRightName);
+    		
+
+    		// get intervals for the two variables
+    		AWrapper a = fixPoint.getFlowBefore(stmt);
+    		System.out.println("\t\tAbstract domain: " + a);
+    		Interval intervalLeft = null, intervalRight = null;
+    		try {
+    			intervalLeft = a.elem.getBound(a.man, weldLeftName);
+    			intervalRight = a.elem.getBound(a.man, weldRightName);
+			} catch (ApronException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			System.out.println("\t\tPossible values for " + weldLeftName + ": " + intervalLeft);
+			System.out.println("\t\tPossible values for " + weldRightName + ": " + intervalRight);
+    		
+			
+			// test interval against constraints
+			boolean satisfiesLeftConstraint = false;
+			boolean satisfiesRightConstraint = false;
+			try {
+				satisfiesLeftConstraint = a.elem.satisfy(a.man, weldLeftName, constraintsInterval);
+				satisfiesRightConstraint = a.elem.satisfy(a.man, weldRightName, constraintsInterval);
+			} catch (ApronException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			System.out.println("\t\tIs " + intervalLeft + " in " + constraintsInterval + ": " + satisfiesLeftConstraint);
+			System.out.println("\t\tIs " + intervalRight + " in " + constraintsInterval + ": " + satisfiesRightConstraint + "\n");
+			
+			if(!satisfiesLeftConstraint || !satisfiesRightConstraint){
+				checkAllConstraints = false;
+			}
+    	}
+    	
+    	System.out.println("\n\tDid all the constraints hold: " + checkAllConstraints + "\n");
+        return checkAllConstraints;
     }
 
     private static boolean verifyWeldAt(SootMethod method, Analysis fixPoint, PAG pointsTo) {
@@ -79,21 +142,24 @@ public class Verifier {
     	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
     	
     	// get arguments
-    	Value[] weldBorders = getArguments(ops);
-    	Value weldLeft = weldBorders[0];
-    	Value weldRight = weldBorders[1];
-    	System.out.println("Robot needs to weld at (" + weldLeft + ", " + weldRight + ")");
+    	Value[] weldConstraints = getRobotConstraints(ops);
+    	Value weldLeftConstraint = weldConstraints[0];
+    	Value weldRightConstraint = weldConstraints[1];
+    	System.out.println("\t" + "Robot needs to weld at (" + weldLeftConstraint + ", " + weldRightConstraint + ")");
+    	
+    	// search for all calls to weldAt
+    	LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldAt");
     	
         return false;
     }
     
-    private static Value[] getArguments(PatchingChain<Unit> ops){
+    private static Value[] getRobotConstraints(PatchingChain<Unit> ops){
     	Value weldLeft = null, weldRight = null;
     	
     	for(Unit op : ops){
     		//search for initialization of the robot
     		if(op.toString().contains("<init>")){
-    			System.out.println(op);
+    			System.out.println("\t" + op);
     			JInvokeStmt init = (JInvokeStmt) op;
     			// search for arguments
     			boolean leftAssigned = false;
@@ -114,6 +180,22 @@ public class Verifier {
     		System.out.println("Something went wrong in finding th arguments :/");
     	}
     	return new Value[] {weldLeft, weldRight};
+    }
+    
+    private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt){
+    	if(stmt != "weldAt" && stmt != "weldBetween"){
+    		System.out.println("Error, stmt not defined properly");
+    		return null;
+    	}
+    	
+    	LinkedList<JInvokeStmt> stmts = new LinkedList<JInvokeStmt>();
+    	for(Unit op : ops){
+    		if(op.toString().contains(stmt)){
+    			stmts.add((JInvokeStmt) op);
+    		}
+    	}
+    	
+    	return stmts;
     }
 
     private static SootClass loadClass(String name) {
