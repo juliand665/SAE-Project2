@@ -28,7 +28,7 @@ public class Verifier {
             System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
             System.exit(-1);
         }
-        String analyzedClass = "Test_5";
+        String analyzedClass = "Test_6";
         SootClass c = loadClass(analyzedClass);
 
         PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -45,12 +45,16 @@ public class Verifier {
             Analysis analysis = new Analysis(new BriefUnitGraph(method.retrieveActiveBody()), c);
             analysis.run();
             
+            System.out.println("\n\n%%%%%%%%% BEGIN VERIFYING %%%%%%%%%");
+            
             if (!verifyWeldAt(method, analysis, pointsToAnalysis)) {
                 weldAtFlag = 0;
             }
             if (!verifyWeldBetween(method, analysis, pointsToAnalysis)) {
                 weldBetweenFlag = 0;
             }
+
+            System.out.println("%%%%%%%%%% END VERIFYING %%%%%%%%%%\n\n");
         }
         
         // Do not change the output format
@@ -76,7 +80,7 @@ public class Verifier {
     	int weldLeftConstraint = ((IntConstant)weldConstraints[0]).value;
     	int weldRightConstraint = ((IntConstant)weldConstraints[1]).value;;
     	Interval constraintsInterval = new Interval(weldLeftConstraint, weldRightConstraint);
-    	System.out.println("\t" + "Robot needs to weld between " + weldLeftConstraint + " and " + weldRightConstraint);
+    	System.out.println("\t" + "Robot is allowed to weld between " + weldLeftConstraint + " and " + weldRightConstraint);
     	
     	// search for all calls to weldBetween
     	LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldBetween");
@@ -114,7 +118,7 @@ public class Verifier {
 			System.out.println("\t\tPossible values for " + weldRightName + ": " + intervalRight);
     		
 			
-			// test interval against constraints
+			// test intervals against constraints
 			boolean satisfiesLeftConstraint = false;
 			boolean satisfiesRightConstraint = false;
 			try {
@@ -132,7 +136,7 @@ public class Verifier {
 			}
     	}
     	
-    	System.out.println("\n\tDid all the constraints hold: " + checkAllConstraints + "\n");
+    	System.out.println("\tDid all the constraints hold: " + checkAllConstraints + "\n");
         return checkAllConstraints;
     }
 
@@ -143,14 +147,58 @@ public class Verifier {
     	
     	// get arguments
     	Value[] weldConstraints = getRobotConstraints(ops);
-    	Value weldLeftConstraint = weldConstraints[0];
-    	Value weldRightConstraint = weldConstraints[1];
-    	System.out.println("\t" + "Robot needs to weld at (" + weldLeftConstraint + ", " + weldRightConstraint + ")");
+    	int weldLeftConstraint = ((IntConstant)weldConstraints[0]).value;
+    	int weldRightConstraint = ((IntConstant)weldConstraints[1]).value;;
+    	Interval constraintsInterval = new Interval(weldLeftConstraint, weldRightConstraint);
+    	System.out.println("\t" + "Robot is allowed to weld between " + weldLeftConstraint + " and " + weldRightConstraint);
     	
     	// search for all calls to weldAt
     	LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldAt");
+
+    	// check constraints
+    	System.out.println("\tCheck constraints...");
+    	boolean checkAllConstraints = true;
+    	for(JInvokeStmt stmt : invokeCalls){
+    		// get variable names
+    		String weldPositionName = null;
+    		for(Object s : stmt.getUseBoxes()){
+    			if(s instanceof ImmediateBox){
+    				weldPositionName = ((ImmediateBox) s).getValue().toString();
+    			}
+    		}
+    		System.out.println("\t\tRobot will weld at " + weldPositionName);
+    		
+
+    		// get interval for the position variable
+    		AWrapper a = fixPoint.getFlowBefore(stmt);
+    		System.out.println("\t\tAbstract domain: " + a);
+    		Interval positionInterval = null;
+    		try {
+    			positionInterval = a.elem.getBound(a.man, weldPositionName);
+			} catch (ApronException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			System.out.println("\t\tPossible values for " + weldPositionName + ": " + positionInterval);
+    		
+			
+			// test interval against constraints
+			boolean satisfiesConstraint = false;
+			try {
+				satisfiesConstraint = a.elem.satisfy(a.man, weldPositionName, constraintsInterval);
+			} catch (ApronException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			System.out.println("\t\tIs " + weldPositionName + " in " + constraintsInterval + ": " + satisfiesConstraint + "\n");
+			
+			if(!satisfiesConstraint){
+				checkAllConstraints = false;
+			}
+    	}
     	
-        return false;
+    	System.out.println("\tDid all the constraints hold: " + checkAllConstraints + "\n");
+        return checkAllConstraints;
     }
     
     private static Value[] getRobotConstraints(PatchingChain<Unit> ops){
