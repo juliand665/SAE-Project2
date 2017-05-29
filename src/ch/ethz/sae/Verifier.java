@@ -10,8 +10,10 @@ import apron.Interval;
 import apron.Scalar;
 import soot.jimple.internal.ImmediateBox;
 import soot.jimple.internal.JInvokeStmt;
+import soot.jimple.internal.JSpecialInvokeExpr;
 import soot.jimple.spark.SparkTransformer;
 import soot.jimple.spark.pag.PAG;
+import soot.Immediate;
 import soot.PatchingChain;
 import soot.Scene;
 import soot.SootClass;
@@ -23,100 +25,104 @@ import soot.jimple.*;
 
 public class Verifier {
 
-    public static void main(String[] args) {
-        if (args.length != 1) {
-            System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
-            System.exit(-1);
-        }
-        String analyzedClass = "Test_7";
-        SootClass c = loadClass(analyzedClass);
+	public static void main(String[] args) {
+		if (args.length != 1) {
+			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
+			System.exit(-1);
+		}
+		String analyzedClass = args[0];
+		SootClass c = loadClass(analyzedClass);
 
-        PAG pointsToAnalysis = doPointsToAnalysis(c);
+		PAG pointsToAnalysis = doPointsToAnalysis(c);
 
-        int weldAtFlag = 1;
-        int weldBetweenFlag = 1;
+		int weldAtFlag = 1;
+		int weldBetweenFlag = 1;
 
-        for (SootMethod method : c.getMethods()) {
+		for (SootMethod method : c.getMethods()) {
 
-            if (method.getName().contains("<init>")) {
-                // skip constructor of the class
-                continue;
-            }
-            Analysis analysis = new Analysis(new BriefUnitGraph(method.retrieveActiveBody()), c);
-            analysis.run();
-            
-            System.out.println("\n\n%%%%%%%%% BEGIN VERIFYING %%%%%%%%%");
-            
-            if (!verifyWeldAt(method, analysis, pointsToAnalysis)) {
-                weldAtFlag = 0;
-            }
-            if (!verifyWeldBetween(method, analysis, pointsToAnalysis)) {
-                weldBetweenFlag = 0;
-            }
+			if (method.getName().contains("<init>")) {
+				// skip constructor of the class
+				continue;
+			}
+			Analysis analysis = new Analysis(new BriefUnitGraph(method.retrieveActiveBody()), c);
+			analysis.run();
 
-            System.out.println("%%%%%%%%%% END VERIFYING %%%%%%%%%%\n\n");
-        }
-        
-        // Do not change the output format
-        if (weldAtFlag == 1) {
-            System.out.println(analyzedClass + " WELD_AT_OK");
-        } else {
-            System.out.println(analyzedClass + " WELD_AT_NOT_OK");
-        }
-        if (weldBetweenFlag == 1) {
-            System.out.println(analyzedClass + " WELD_BETWEEN_OK");
-        } else {
-            System.out.println(analyzedClass + " WELD_BETWEEN_NOT_OK");
-        }
-    }
+			Logger.log();
+			Logger.log();
+			Logger.log("%%%%%%%%% BEGIN VERIFYING %%%%%%%%%");
+			Logger.log();
+			Logger.log();
 
-    private static boolean verifyWeldBetween(SootMethod method, Analysis fixPoint, PAG pointsTo) {
-    	// TODO: change to using hashmaps just as in weldAt, avoid duplicated code
-    	System.out.println("\nVerify WeldBetween");
-    	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
-    	
-    	// get arguments
-    	Value[] weldConstraints = getRobotConstraints(ops);
-    	int weldLeftConstraint = ((IntConstant)weldConstraints[0]).value;
-    	int weldRightConstraint = ((IntConstant)weldConstraints[1]).value;;
-    	Interval constraintsInterval = new Interval(weldLeftConstraint, weldRightConstraint);
-    	System.out.println("\t" + "Robot is allowed to weld between " + weldLeftConstraint + " and " + weldRightConstraint);
-    	
-    	// search for all calls to weldBetween
-    	LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldBetween");
-    	
-    	// check constraints
-    	System.out.println("\tCheck constraints...");
-    	boolean checkAllConstraints = true;
-    	for(JInvokeStmt stmt : invokeCalls){
-    		// get variable names
-    		String weldLeftName = null, weldRightName = null;
-    		for(Object s : stmt.getUseBoxes()){
-    			if(s instanceof ImmediateBox){
-    				if(weldLeftName == null){
-    					weldLeftName = ((ImmediateBox) s).getValue().toString();
-    				}else{
-    					weldRightName = ((ImmediateBox) s).getValue().toString();
-    				}
-    			}
-    		}
-    		System.out.println("\t\tRobot will weld between " + weldLeftName + " and " + weldRightName);
-    		
+			if (!verifyWeldAt(method, analysis, pointsToAnalysis)) {
+				weldAtFlag = 0;
+			}
+			Logger.log();
+			if (!verifyWeldBetween(method, analysis, pointsToAnalysis)) {
+				weldBetweenFlag = 0;
+			}
 
-    		// get intervals for the two variables
-    		AWrapper a = fixPoint.getFlowBefore(stmt);
-    		System.out.println("\t\tAbstract domain: " + a);
-    		Interval intervalLeft = null, intervalRight = null;
-    		try {
-    			intervalLeft = a.elem.getBound(a.man, weldLeftName);
-    			intervalRight = a.elem.getBound(a.man, weldRightName);
+			Logger.log();
+			Logger.log("%%%%%%%%%% END VERIFYING %%%%%%%%%%");
+			Logger.log();
+			Logger.log();
+		}
+
+		// Do not change the output format
+		if (weldAtFlag == 1) {
+			System.out.println(analyzedClass + " WELD_AT_OK");
+		} else {
+			System.out.println(analyzedClass + " WELD_AT_NOT_OK");
+		}
+		if (weldBetweenFlag == 1) {
+			System.out.println(analyzedClass + " WELD_BETWEEN_OK");
+		} else {
+			System.out.println(analyzedClass + " WELD_BETWEEN_NOT_OK");
+		}
+	}
+
+	private static boolean verifyWeldBetween(SootMethod method, Analysis fixPoint, PAG pointsTo) {
+		// TODO: change to using hashmaps just as in weldAt, avoid duplicated code
+		Logger.log("Verifying WeldBetween...");
+		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
+
+		// get arguments
+		Interval constraintsInterval = getRobotConstraints(ops);
+		Logger.logIndenting(1, "Robot is allowed to weld in", constraintsInterval);
+
+		// search for all calls to weldBetween
+		LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldBetween");
+
+		// check constraints
+		Logger.logIndenting(1, "Checking constraints...");
+		for (JInvokeStmt stmt : invokeCalls) {
+			// get variable names
+			String weldLeftName = null, weldRightName = null;
+			for (Object s : stmt.getUseBoxes()) {
+				if (s instanceof ImmediateBox) {
+					if (weldLeftName == null) {
+						weldLeftName = ((ImmediateBox) s).getValue().toString();
+					} else {
+						weldRightName = ((ImmediateBox) s).getValue().toString();
+					}
+				}
+			}
+			Logger.logIndenting(2, "Robot will weld between", weldLeftName, "and", weldRightName);
+
+
+			// get intervals for the two variables
+			AWrapper a = fixPoint.getFlowBefore(stmt);
+			Logger.logIndenting(2, "Abstract domain:", a);
+			Interval intervalLeft = null, intervalRight = null;
+			try {
+				intervalLeft = a.elem.getBound(a.man, weldLeftName);
+				intervalRight = a.elem.getBound(a.man, weldRightName);
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
-			System.out.println("\t\tPossible values for " + weldLeftName + ": " + intervalLeft);
-			System.out.println("\t\tPossible values for " + weldRightName + ": " + intervalRight);
-    		
-			
+			Logger.logIndenting(2, "Possible values for", weldLeftName + ":", intervalLeft);
+			Logger.logIndenting(2, "Possible values for", weldRightName + ": ", intervalRight);
+
+
 			// test intervals against constraints
 			boolean satisfiesLeftConstraint = false;
 			boolean satisfiesRightConstraint = false;
@@ -126,62 +132,57 @@ public class Verifier {
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
-			System.out.println("\t\tIs " + intervalLeft + " in " + constraintsInterval + ": " + satisfiesLeftConstraint);
-			System.out.println("\t\tIs " + intervalRight + " in " + constraintsInterval + ": " + satisfiesRightConstraint + "\n");
-			
-			if(!satisfiesLeftConstraint || !satisfiesRightConstraint){
-				checkAllConstraints = false;
+			Logger.logIndenting(2, "Is", intervalLeft, "in", constraintsInterval + "?", satisfiesLeftConstraint);
+			Logger.logIndenting(2, "Is", intervalRight, "in", constraintsInterval + "?", satisfiesRightConstraint);
+			Logger.log();
+
+			if (!satisfiesLeftConstraint || !satisfiesRightConstraint) {
+				return false;
 			}
-    	}
-    	
-    	System.out.println("\tDid all the constraints hold: " + checkAllConstraints + "\n");
-        return checkAllConstraints;
-    }
+		}
+		return true;
+	}
 
-    private static boolean verifyWeldAt(SootMethod method, Analysis fixPoint, PAG pointsTo) {
-    	// TODO: change to be able to use multiple robots (hashmap)
-    	System.out.println("\nVerify WeldAt");
-    	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
-    	
-    	// get arguments
-    	// TODO: change output of getRobotsConstraint to hashmap<robot_id, interval>
-    	Value[] weldConstraints = getRobotConstraints(ops);
-    	int weldLeftConstraint = ((IntConstant)weldConstraints[0]).value;
-    	int weldRightConstraint = ((IntConstant)weldConstraints[1]).value;;
-    	Interval constraintsInterval = new Interval(weldLeftConstraint, weldRightConstraint);
-    	System.out.println("\t" + "Robot is allowed to weld between " + weldLeftConstraint + " and " + weldRightConstraint);
-    	
-    	// search for all calls to weldAt
-    	// TODO: change output to hashmap<robot_id, JInvokeStmt>
-    	LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldAt");
+	private static boolean verifyWeldAt(SootMethod method, Analysis fixPoint, PAG pointsTo) {
+		// TODO: change to be able to use multiple robots (hashmap)
+		Logger.log("Verifying WeldAt...");
+		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
 
-    	// check constraints
-    	System.out.println("\tCheck constraints...");
-    	boolean checkAllConstraints = true;
-    	for(JInvokeStmt stmt : invokeCalls){
-    		// get variable names
-    		String weldPositionName = null;
-    		for(Object s : stmt.getUseBoxes()){
-    			if(s instanceof ImmediateBox){
-    				weldPositionName = ((ImmediateBox) s).getValue().toString();
-    			}
-    		}
-    		System.out.println("\t\tRobot will weld at " + weldPositionName);
-    		
+		// get arguments
+		// TODO: change output of getRobotsConstraint to hashmap<robot_id, interval>
+		Interval constraintsInterval = getRobotConstraints(ops);
+		Logger.logIndenting(1, "Robot is allowed to weld in", constraintsInterval);
 
-    		// get interval for the position variable
-    		// TODO: update to using hasmap, only cosmetical
-    		AWrapper a = fixPoint.getFlowBefore(stmt);
-    		System.out.println("\t\tAbstract domain: " + a);
-    		Interval positionInterval = null;
-    		try {
-    			positionInterval = a.elem.getBound(a.man, weldPositionName);
+		// search for all calls to weldAt
+		// TODO: change output to hashmap<robot_id, JInvokeStmt>
+		LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldAt");
+
+		// check constraints
+		Logger.logIndenting(1, "Checking constraints...");
+		for (JInvokeStmt stmt : invokeCalls) {
+			// get variable names
+			String weldPositionName = null;
+			for (Object s : stmt.getUseBoxes()) {
+				if (s instanceof ImmediateBox) {
+					weldPositionName = ((ImmediateBox) s).getValue().toString();
+				}
+			}
+			Logger.logIndenting(2, "Robot will weld at", weldPositionName);
+
+
+			// get interval for the position variable
+			// TODO: update to using hasmap, only cosmetical
+			AWrapper a = fixPoint.getFlowBefore(stmt);
+			Logger.logIndenting(2, "Abstract domain: " + a);
+			Interval positionInterval = null;
+			try {
+				positionInterval = a.elem.getBound(a.man, weldPositionName);
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
-			System.out.println("\t\tPossible domain for " + weldPositionName + ": " + positionInterval);
-    		
-			
+			Logger.logIndenting(2, "Possible domain for", weldPositionName + ":", positionInterval);
+
+
 			// test interval against constraints
 			boolean satisfiesConstraint = false;
 			try {
@@ -190,87 +191,78 @@ public class Verifier {
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
-			System.out.println("\t\tIs " + weldPositionName + " in " + constraintsInterval + ": " + satisfiesConstraint + "\n");
-			
-			if(!satisfiesConstraint){
-				checkAllConstraints = false;
+			Logger.logIndenting(2, "Is", weldPositionName, "in", constraintsInterval + "?", satisfiesConstraint);
+			Logger.log();
+
+			if(!satisfiesConstraint)
+				return false;
+		}
+		return true;
+	}
+
+	private static int toInt(Value value) {
+		if (value instanceof IntConstant) {
+			return ((IntConstant) value).value;
+		}
+		Logger.log("Could not convert value", value, "to IntConstant!");
+		return 0;
+	}
+
+	private static Interval getRobotConstraints(PatchingChain<Unit> ops) {
+		for (Unit op : ops) {
+			//search for initialization of the robot
+			if (op instanceof JInvokeStmt) {
+				InvokeExpr init = ((JInvokeStmt) op).getInvokeExpr();
+				if (init.getMethod().isConstructor()) {
+					// construct interval from arguments to robot constructor
+					return new Interval(toInt(init.getArg(0)), toInt(init.getArg(1)));
+				}
 			}
-    	}
-    	
-    	System.out.println("\tDid all the constraints hold: " + checkAllConstraints + "\n");
-        return checkAllConstraints;
-    }
-    
-    private static Value[] getRobotConstraints(PatchingChain<Unit> ops){
-    	Value weldLeft = null, weldRight = null;
-    	
-    	for(Unit op : ops){
-    		//search for initialization of the robot
-    		if(op.toString().contains("<init>")){
-    			System.out.println("\t" + op);
-    			JInvokeStmt init = (JInvokeStmt) op;
-    			// search for arguments
-    			boolean leftAssigned = false;
-    			for(Object o : init.getUseBoxes()){
-    				if(o instanceof ImmediateBox){
-    					if(!leftAssigned){
-    						weldLeft = ((ImmediateBox)o).getValue();
-    						leftAssigned = true;
-    					}else{
-    						weldRight = ((ImmediateBox)o).getValue();
-    					}
-    				}
-    			}
-    		}
-    	}
-    	
-    	if(weldLeft == null || weldRight == null){
-    		System.out.println("Something went wrong in finding th arguments :/");
-    	}
-    	return new Value[] {weldLeft, weldRight};
-    }
-    
-    private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt){
-    	if(stmt != "weldAt" && stmt != "weldBetween"){
-    		System.out.println("Error, stmt not defined properly");
-    		return null;
-    	}
-    	
-    	LinkedList<JInvokeStmt> stmts = new LinkedList<JInvokeStmt>();
-    	for(Unit op : ops){
-    		// not perfect and still breakable (System.out.println("Robot: void weldAt");), but good enough
-    		if(op.toString().contains("Robot: void " + stmt)){
-    			stmts.add((JInvokeStmt) op);
-    		}
-    	}
-    	
-    	return stmts;
-    }
+		}
 
-    private static SootClass loadClass(String name) {
-        SootClass c = Scene.v().loadClassAndSupport(name);
-        c.setApplicationClass();
-        return c;
-    }
+		Logger.log("Something went wrong in finding the robot constraints!");
+		return new Interval(0, 0);
+	}
 
-    // Performs Points-To Analysis
-    private static PAG doPointsToAnalysis(SootClass c) {
-        Scene.v().setEntryPoints(c.getMethods());
+	private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt) {
+		LinkedList<JInvokeStmt> stmts = new LinkedList<JInvokeStmt>();
+		
+		for (Unit op : ops) {
+			if (op instanceof JInvokeStmt) {
+				JInvokeStmt invoke = (JInvokeStmt) op;
+				Logger.log("Checking", invoke.getInvokeExpr().getMethod().getName(), "against", stmt);
+				if (invoke.getInvokeExpr().getMethod().getName().equals(stmt))
+					stmts.add(invoke);
+			}
+		}
 
-        HashMap<String, String> options = new HashMap<String, String>();
-        options.put("enabled", "true");
-        options.put("verbose", "false");
-        options.put("propagator", "worklist");
-        options.put("simple-edges-bidirectional", "false");
-        options.put("on-fly-cg", "true");
-        options.put("set-impl", "double");
-        options.put("double-set-old", "hybrid");
-        options.put("double-set-new", "hybrid");
+		return stmts;
+	}
 
-        SparkTransformer.v().transform("", options);
-        PAG pag = (PAG) Scene.v().getPointsToAnalysis();
+	private static SootClass loadClass(String name) {
+		SootClass c = Scene.v().loadClassAndSupport(name);
+		c.setApplicationClass();
+		return c;
+	}
 
-        return pag;
-    }
+	// Performs Points-To Analysis
+	private static PAG doPointsToAnalysis(SootClass c) {
+		Scene.v().setEntryPoints(c.getMethods());
+
+		HashMap<String, String> options = new HashMap<String, String>();
+		options.put("enabled", "true");
+		options.put("verbose", "false");
+		options.put("propagator", "worklist");
+		options.put("simple-edges-bidirectional", "false");
+		options.put("on-fly-cg", "true");
+		options.put("set-impl", "double");
+		options.put("double-set-old", "hybrid");
+		options.put("double-set-new", "hybrid");
+
+		SparkTransformer.v().transform("", options);
+		PAG pag = (PAG) Scene.v().getPointsToAnalysis();
+
+		return pag;
+	}
 
 }

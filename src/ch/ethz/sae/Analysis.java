@@ -73,8 +73,8 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		recordIntLocalVars();
 		recordIntClassVars();
 
-		log("local vars:", Arrays.toString(local_ints));
-		log("class vars:", Arrays.toString(class_ints));
+		Logger.log("local vars:", Arrays.toString(local_ints));
+		Logger.log("class vars:", Arrays.toString(class_ints));
 
 		String ints[] = new String[local_ints.length + class_ints.length];
 
@@ -118,21 +118,9 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		doAnalysis();
 	}
 
-	public static final boolean LOG_DEBUG = true;
-
-	// helper function for debug output
-	private void log(Object... objs) {
-		if (LOG_DEBUG) {
-			System.out.print("[Debug] ");
-			for (Object o : objs)
-				System.out.print(o + " ");
-			System.out.println();
-		}
-	}
-
 	// debug output for uncaught conversion cases
 	private void failedConversion(Value value, String dest) {
-		log("     Couldn't convert value of type", value.getClass(), "to", dest);
+		Logger.logIndenting(2, "Couldn't convert value of type", value.getClass(), "to", dest);
 	}
 
 	// extracts the (arithmetic) operation of a Soot binary expression
@@ -172,12 +160,12 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 		// split into operands
 		Value lhs = def.getLeftOp(), rhs = def.getRightOp();
-		if (verbose) log("Definition of", lhs, "(" + lhs.getClass() + ")", "as", rhs, "(" + rhs.getClass() + ")");
+		if (verbose) Logger.log("Definition of", lhs, "(" + lhs.getClass() + ")", "as", rhs, "(" + rhs.getClass() + ")");
 
 		// parse expressions on either side
 		String var = ((JimpleLocal) lhs).getName(); // local variable to assign to
 		Texpr1Node expr = toExpr(rhs);
-		if (verbose) log("expr:", expr);
+		if (verbose) Logger.log("expr:", expr);
 
 		if (expr != null) {
 			Texpr1Intern val = new Texpr1Intern(env, expr); // value to assign
@@ -195,18 +183,18 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		ConditionExpr cond = (ConditionExpr) jIf.getCondition();
 		Texpr1Node l = toExpr(cond.getOp1());
 		Texpr1Node r = toExpr(cond.getOp2());
-		if (verbose) log(cond.getClass(), cond.getOp1().getClass(), cond.getOp2().getClass());
+		if (verbose) Logger.log(cond.getClass(), cond.getOp1().getClass(), cond.getOp2().getClass());
 
 		// parse (in-)equality for easier logic later in toConstraint
 		boolean equality = cond instanceof JEqExpr || cond instanceof JNeExpr; // ==, !=
 		boolean strict = cond instanceof JGtExpr || cond instanceof JLtExpr; // >, <
 		boolean negated = cond instanceof JNeExpr || cond instanceof JLeExpr || cond instanceof JLtExpr; // !=, <=, <
-		if (verbose) log("=", equality, "//", "</>", strict, "//", "!", negated);
+		if (verbose) Logger.log("=", equality, "//", "</>", strict, "//", "!", negated);
 
 		// convert to constraints for un-/fulfilment
 		Tcons1 tCons = toConstraint(l, r, equality, strict, negated);
 		Tcons1 fCons = toConstraint(l, r, equality, !strict, !negated);
-		if (verbose) log("true:", tCons, "//", "false:", fCons);
+		if (verbose) Logger.log("true:", tCons, "//", "false:", fCons);
 
 		// apply to state (TODO better word for state?)
 		branch.meet(man, tCons);
@@ -234,9 +222,9 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 		// debug output
 		try {
-			log("  ", op, "-----", in, "->", fallOut, "+", branchOut);
+			Logger.logIndenting(1, op, "-----", in, "->", fallOut, "+", branchOut);
 		} catch (Exception e) {
-			log("Error while trying to log:", e);
+			Logger.log("Error while trying to log:", e);
 		}
 
 		try {
@@ -252,7 +240,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 				}
 			} catch (IllegalArgumentException e) {
 				// This mostly happens when variables aren't defined in our environment, which (hopefully) means we don't care about them.
-				log("     Statement ignored! Illegal argument given (don't worry unless this was an int):", e);
+				Logger.logIndenting(2, "Statement ignored! Illegal argument given (don't worry unless this was an int):", e);
 			}
 
 			// apply to wrappers
@@ -261,10 +249,10 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			for (AWrapper out : branchOut)
 				out.set(branch);
 
-			log("     Fall through:", fallOut, "Branch:", branchOut);
+			Logger.logIndenting(2, "Fall through:", fallOut, "Branch:", branchOut);
 
 		} catch (ApronException e) {
-			log("ApronException in flowThrough:", e);
+			Logger.log("ApronException in flowThrough:", e);
 			//e.printStackTrace();
 		}
 	}
