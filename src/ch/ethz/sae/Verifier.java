@@ -1,30 +1,14 @@
 package ch.ethz.sae;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
-import apron.Abstract1;
-import apron.ApronException;
-import apron.DoubleScalar;
-import apron.Interval;
-import apron.Scalar;
-import apron.Texpr1Intern;
-import apron.Texpr1Node;
-import soot.jimple.internal.ImmediateBox;
-import soot.jimple.internal.JInvokeStmt;
-import soot.jimple.internal.JSpecialInvokeExpr;
+import apron.*;
+import soot.*;
+import soot.jimple.*;
+import soot.jimple.internal.*;
 import soot.jimple.spark.SparkTransformer;
 import soot.jimple.spark.pag.PAG;
-import soot.Immediate;
-import soot.PatchingChain;
-import soot.Scene;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
 import soot.toolkits.graph.BriefUnitGraph;
-import soot.jimple.*;
 
 public class Verifier {
 
