@@ -2,12 +2,15 @@ package ch.ethz.sae;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 
 import apron.Abstract1;
 import apron.ApronException;
 import apron.DoubleScalar;
 import apron.Interval;
 import apron.Scalar;
+import apron.Texpr1Intern;
+import apron.Texpr1Node;
 import soot.jimple.internal.ImmediateBox;
 import soot.jimple.internal.JInvokeStmt;
 import soot.jimple.internal.JSpecialInvokeExpr;
@@ -53,11 +56,11 @@ public class Verifier {
 			Logger.log();
 			Logger.log();
 
-			if (!verifyWeldAt(method, analysis, pointsToAnalysis)) {
+			if (!verifyCallsTo("weldAt", method, analysis, pointsToAnalysis)) {
 				weldAtFlag = 0;
 			}
 			Logger.log();
-			if (!verifyWeldBetween(method, analysis, pointsToAnalysis)) {
+			if (!verifyCallsTo("weldBetween", method, analysis, pointsToAnalysis)) {
 				weldBetweenFlag = 0;
 			}
 
@@ -79,119 +82,49 @@ public class Verifier {
 			System.out.println(analyzedClass + " WELD_BETWEEN_NOT_OK");
 		}
 	}
-
-	private static boolean verifyWeldBetween(SootMethod method, Analysis fixPoint, PAG pointsTo) {
-		// TODO: change to using hashmaps just as in weldAt, avoid duplicated code
-		Logger.log("Verifying WeldBetween...");
+	
+	private static boolean verifyCallsTo(String methodName, SootMethod method, Analysis fixPoint, PAG pointsTo) {
+		// TODO: Change to handle multiple robots! (possibly with a HashMap)
+		Logger.log("Verifying", methodName + "...");
 		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
 
-		// get arguments
-		Interval constraintsInterval = getRobotConstraints(ops);
-		Logger.logIndenting(1, "Robot is allowed to weld in", constraintsInterval);
-
-		// search for all calls to weldBetween
-		LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldBetween");
-
-		// check constraints
-		Logger.logIndenting(1, "Checking constraints...");
-		for (JInvokeStmt stmt : invokeCalls) {
-			// get variable names
-			String weldLeftName = null, weldRightName = null;
-			for (Object s : stmt.getUseBoxes()) {
-				if (s instanceof ImmediateBox) {
-					if (weldLeftName == null) {
-						weldLeftName = ((ImmediateBox) s).getValue().toString();
-					} else {
-						weldRightName = ((ImmediateBox) s).getValue().toString();
-					}
-				}
-			}
-			Logger.logIndenting(2, "Robot will weld between", weldLeftName, "and", weldRightName);
-
-			// get intervals for the two variables
-			AWrapper a = fixPoint.getFlowBefore(stmt);
-			Logger.logIndenting(2, "Abstract domain:", a);
-			Interval intervalLeft = null, intervalRight = null;
-			try {
-				intervalLeft = a.get().getBound(a.man, weldLeftName);
-				intervalRight = a.get().getBound(a.man, weldRightName);
-			} catch (ApronException e) {
-				e.printStackTrace();
-			}
-			Logger.logIndenting(2, "Possible values for", weldLeftName + ":", intervalLeft);
-			Logger.logIndenting(2, "Possible values for", weldRightName + ":", intervalRight);
-
-			// test intervals against constraints
-			boolean satisfiesLeftConstraint = false;
-			boolean satisfiesRightConstraint = false;
-			try {
-				satisfiesLeftConstraint = a.get().satisfy(a.man, weldLeftName, constraintsInterval);
-				satisfiesRightConstraint = a.get().satisfy(a.man, weldRightName, constraintsInterval);
-			} catch (ApronException e) {
-				e.printStackTrace();
-			}
-			Logger.logIndenting(2, "Is", intervalLeft, "in", constraintsInterval + "?", satisfiesLeftConstraint);
-			Logger.logIndenting(2, "Is", intervalRight, "in", constraintsInterval + "?", satisfiesRightConstraint);
-			Logger.log();
-
-			if (!satisfiesLeftConstraint || !satisfiesRightConstraint) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	private static boolean verifyWeldAt(SootMethod method, Analysis fixPoint, PAG pointsTo) {
-		// TODO: change to be able to use multiple robots (hashmap)
-		Logger.log("Verifying WeldAt...");
-		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
-
-		// get arguments
-		// TODO: change output of getRobotsConstraint to hashmap<robot_id, interval>
-		Interval constraintsInterval = getRobotConstraints(ops);
-		Logger.logIndenting(1, "Robot is allowed to weld in", constraintsInterval);
+		// get robot constraints
+		Interval robotBounds = getRobotConstraints(ops);
+		Logger.logIndenting(1, "Robot is allowed to weld in", robotBounds);
 
 		// search for all calls to weldAt
-		// TODO: change output to hashmap<robot_id, JInvokeStmt>
-		LinkedList<JInvokeStmt> invokeCalls = getInvokeCalls(ops, "weldAt");
-
+		LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName);
+		
+		return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, robotBounds);
+	}
+	
+	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, Interval bounds) {
+		// TODO take a specific robot as argument
+		final boolean verbose = true;
+		
 		// check constraints
 		Logger.logIndenting(1, "Checking constraints...");
-		for (JInvokeStmt stmt : invokeCalls) {
-			// get variable names
-			String weldPositionName = null;
-			for (Object s : stmt.getUseBoxes()) {
-				if (s instanceof ImmediateBox) {
-					weldPositionName = ((ImmediateBox) s).getValue().toString();
+		for (JInvokeStmt stmt : invocations) {
+			AWrapper state = fixPoint.getFlowBefore(stmt);
+			InvokeExpr invoke = stmt.getInvokeExpr();
+			// this works for both weldAt and weldBetween
+			for (Value arg : invoke.getArgs()) {
+				try {
+					Texpr1Node expr = Analysis.toExpr(arg);
+					if (expr == null)
+						break;
+					Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
+					Interval possibleValues = state.get().getBound(state.man, inContext);
+
+					if (verbose) Logger.logIndenting(2, "Possible welding values:", possibleValues);
+					
+					int comparison = bounds.cmp(possibleValues);
+					if (comparison != 0 && comparison != 1) // not equal and not contained
+						return false;
+				} catch (ApronException e) {
+					Logger.log("Caught ApronException in verification:", e);
 				}
 			}
-			Logger.logIndenting(2, "Robot will weld at", weldPositionName);
-
-			// get interval for the position variable
-			// TODO: update to using hashmap, only cosmetic
-			AWrapper a = fixPoint.getFlowBefore(stmt);
-			Logger.logIndenting(2, "Abstract domain: " + a);
-			Interval positionInterval = null;
-			try {
-				positionInterval = a.get().getBound(a.man, weldPositionName);
-			} catch (ApronException e) {
-				e.printStackTrace();
-			}
-			Logger.logIndenting(2, "Possible domain for", weldPositionName + ":", positionInterval);
-
-			// test interval against constraints
-			boolean satisfiesConstraint = false;
-			try {
-				// TODO: find robot associated with the JInvokeStmt and change constrainsInterval accordingly
-				satisfiesConstraint = a.get().satisfy(a.man, weldPositionName, constraintsInterval);
-			} catch (ApronException e) {
-				e.printStackTrace();
-			}
-			Logger.logIndenting(2, "Is", weldPositionName, "in", constraintsInterval + "?", satisfiesConstraint);
-			Logger.log();
-
-			if(!satisfiesConstraint)
-				return false;
 		}
 		return true;
 	}

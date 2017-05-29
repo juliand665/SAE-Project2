@@ -119,12 +119,12 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	}
 
 	// debug output for uncaught conversion cases
-	private void failedConversion(Value value, String dest) {
+	static void failedConversion(Value value, String dest) {
 		Logger.logIndenting(2, "Couldn't convert value of type", value.getClass(), "to", dest);
 	}
 
 	// extracts the (arithmetic) operation of a Soot binary expression
-	private int getOp(BinopExpr bin) {
+	static int getOp(BinopExpr bin) {
 		if (bin instanceof JAddExpr) return Texpr1BinNode.OP_ADD;
 		if (bin instanceof JSubExpr) return Texpr1BinNode.OP_SUB;
 		if (bin instanceof JMulExpr) return Texpr1BinNode.OP_MUL;
@@ -134,7 +134,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	}
 
 	// converts a Soot expression (Value) to an Apron expression (Texpr1Node)
-	private Texpr1Node toExpr(Value value) {
+	static Texpr1Node toExpr(Value value) {
 		if (value instanceof BinopExpr) {
 			BinopExpr bin = (BinopExpr) value;
 			int op = getOp(bin);
@@ -155,7 +155,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	}
 
 	/// computes the output states of applying a definition statement
-	private void applyDef(DefinitionStmt def, Abstract1 fall, Abstract1 branch) throws ApronException {
+	static void applyDef(DefinitionStmt def, Abstract1 fall, Abstract1 branch) throws ApronException {
 		final boolean verbose = false;
 
 		// split into operands
@@ -176,7 +176,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	}
 
 	/// computes the output states of applying an if statement
-	private void applyIf(JIfStmt jIf, Abstract1 fall, Abstract1 branch) throws ApronException {
+	static void applyIf(JIfStmt jIf, Abstract1 fall, Abstract1 branch) throws ApronException {
 		final boolean verbose = false;
 
 		// parse expressions on either side
@@ -202,7 +202,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	}
 
 	// converts an (in-)equality of a given type to a Tcons1 linear constraint (e.g. l >= r -> l-r >= 0; l < r -> r-l > 0 -> r-l-1 >= 0)
-	private Tcons1 toConstraint(Texpr1Node l, Texpr1Node r, boolean equality, boolean strict, boolean negated) {
+	static Tcons1 toConstraint(Texpr1Node l, Texpr1Node r, boolean equality, boolean strict, boolean negated) {
 		// if negated, constrain r-l, otherwise l-r
 		Texpr1BinNode sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, negated ? r : l, negated ? l : r);
 		int cons;
@@ -217,15 +217,17 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	@Override
 	protected void flowThrough(AWrapper in, Unit op,
 			List<AWrapper> fallOut, List<AWrapper> branchOut) {
+		final boolean verbose = false;
 
 		Stmt s = (Stmt) op;
 
 		// debug output
-		try {
-			Logger.logIndenting(1, op, "-----", in, "->", fallOut, "+", branchOut);
-		} catch (Exception e) {
-			Logger.log("Error while trying to log:", e);
-		}
+		if (verbose)
+			try {
+				Logger.logIndenting(1, op, "-----", in, "->", fallOut, "+", branchOut);
+			} catch (Exception e) {
+				Logger.log("Error while trying to log:", e);
+			}
 
 		try {
 			Abstract1 fall = new Abstract1(man, in.get());
@@ -240,7 +242,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 				}
 			} catch (IllegalArgumentException e) {
 				// This mostly happens when variables aren't defined in our environment, which (hopefully) means we don't care about them.
-				Logger.logIndenting(2, "Statement ignored! Illegal argument given (don't worry unless this was an int):", e);
+				if (verbose) Logger.logIndenting(2, "Statement ignored! Illegal argument given (don't worry unless this was an int):", e);
 			}
 
 			// apply to wrappers
@@ -249,10 +251,10 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			for (AWrapper out : branchOut)
 				out.set(branch);
 
-			Logger.logIndenting(2, "Fall through:", fallOut, "Branch:", branchOut);
+			if (verbose) Logger.logIndenting(2, "Fall through:", fallOut, "Branch:", branchOut);
 
 		} catch (ApronException e) {
-			Logger.log("ApronException in flowThrough:", e);
+			if (verbose) Logger.log("ApronException in flowThrough:", e);
 			//e.printStackTrace();
 		}
 	}
