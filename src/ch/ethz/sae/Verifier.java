@@ -2,11 +2,16 @@ package ch.ethz.sae;
 
 import java.util.HashMap;
 
+import soot.jimple.internal.ImmediateBox;
+import soot.jimple.internal.JInvokeStmt;
 import soot.jimple.spark.SparkTransformer;
 import soot.jimple.spark.pag.PAG;
+import soot.PatchingChain;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
+import soot.Unit;
+import soot.Value;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class Verifier {
@@ -56,12 +61,59 @@ public class Verifier {
 
     private static boolean verifyWeldBetween(SootMethod method, Analysis fixPoint, PAG pointsTo) {
     	/* TODO: check whether all calls to weldBetween respect Property 2 */
+    	System.out.println("\nVerify WeldBetween");
+    	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
+    	
+    	// get arguments
+    	Value[] weldBorders = getArguments(ops);
+    	Value weldLeft = weldBorders[0];
+    	Value weldRight = weldBorders[1];
+    	System.out.println("Robot needs to weld between " + weldLeft + " and " + weldRight);
+    	
         return false;
     }
 
     private static boolean verifyWeldAt(SootMethod method, Analysis fixPoint, PAG pointsTo) {
     	/* TODO: check whether all calls to weldAt respect Property 1 */
+    	System.out.println("\nVerify WeldAt");
+    	PatchingChain<Unit> ops = method.getActiveBody().getUnits();
+    	
+    	// get arguments
+    	Value[] weldBorders = getArguments(ops);
+    	Value weldLeft = weldBorders[0];
+    	Value weldRight = weldBorders[1];
+    	System.out.println("Robot needs to weld at (" + weldLeft + ", " + weldRight + ")");
+    	
         return false;
+    }
+    
+    private static Value[] getArguments(PatchingChain<Unit> ops){
+    	Value weldLeft = null, weldRight = null;
+    	
+    	for(Unit op : ops){
+    		//search for initialization of the robot
+    		if(op.toString().contains("<init>")){
+    			System.out.println(op);
+    			JInvokeStmt init = (JInvokeStmt) op;
+    			// search for arguments
+    			boolean leftAssigned = false;
+    			for(Object o : init.getUseBoxes()){
+    				if(o instanceof ImmediateBox){
+    					if(!leftAssigned){
+    						weldLeft = ((ImmediateBox)o).getValue();
+    						leftAssigned = true;
+    					}else{
+    						weldRight = ((ImmediateBox)o).getValue();
+    					}
+    				}
+    			}
+    		}
+    	}
+    	
+    	if(weldLeft == null || weldRight == null){
+    		System.out.println("Something went wrong in finding th arguments :/");
+    	}
+    	return new Value[] {weldLeft, weldRight};
     }
 
     private static SootClass loadClass(String name) {
