@@ -154,7 +154,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		return null;
 	}
 
-	/// computes the output states of applying a definition statement (TODO better word for state?)
+	/// computes the output states of applying a definition statement
 	private void applyDef(DefinitionStmt def, Abstract1 fall, Abstract1 branch) throws ApronException {
 		final boolean verbose = false;
 
@@ -169,13 +169,13 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 
 		if (expr != null) {
 			Texpr1Intern val = new Texpr1Intern(env, expr); // value to assign
-			// apply to state (TODO better word for state?)
+			// apply to state
 			fall.assign(man, var, val, null);
 			branch.assign(man, var, val, null);
 		} // we can ignore anything not parsed by toExpr
 	}
 
-	/// computes the output states of applying an if statement (TODO better word for state?)
+	/// computes the output states of applying an if statement
 	private void applyIf(JIfStmt jIf, Abstract1 fall, Abstract1 branch) throws ApronException {
 		final boolean verbose = false;
 
@@ -196,7 +196,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		Tcons1 fCons = toConstraint(l, r, equality, !strict, !negated);
 		if (verbose) Logger.log("true:", tCons, "//", "false:", fCons);
 
-		// apply to state (TODO better word for state?)
+		// apply to state
 		branch.meet(man, tCons);
 		fall.meet(man, fCons);
 	}

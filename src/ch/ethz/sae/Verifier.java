@@ -108,27 +108,25 @@ public class Verifier {
 			}
 			Logger.logIndenting(2, "Robot will weld between", weldLeftName, "and", weldRightName);
 
-
 			// get intervals for the two variables
 			AWrapper a = fixPoint.getFlowBefore(stmt);
 			Logger.logIndenting(2, "Abstract domain:", a);
 			Interval intervalLeft = null, intervalRight = null;
 			try {
-				intervalLeft = a.elem.getBound(a.man, weldLeftName);
-				intervalRight = a.elem.getBound(a.man, weldRightName);
+				intervalLeft = a.get().getBound(a.man, weldLeftName);
+				intervalRight = a.get().getBound(a.man, weldRightName);
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
 			Logger.logIndenting(2, "Possible values for", weldLeftName + ":", intervalLeft);
-			Logger.logIndenting(2, "Possible values for", weldRightName + ": ", intervalRight);
-
+			Logger.logIndenting(2, "Possible values for", weldRightName + ":", intervalRight);
 
 			// test intervals against constraints
 			boolean satisfiesLeftConstraint = false;
 			boolean satisfiesRightConstraint = false;
 			try {
-				satisfiesLeftConstraint = a.elem.satisfy(a.man, weldLeftName, constraintsInterval);
-				satisfiesRightConstraint = a.elem.satisfy(a.man, weldRightName, constraintsInterval);
+				satisfiesLeftConstraint = a.get().satisfy(a.man, weldLeftName, constraintsInterval);
+				satisfiesRightConstraint = a.get().satisfy(a.man, weldRightName, constraintsInterval);
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
@@ -169,25 +167,23 @@ public class Verifier {
 			}
 			Logger.logIndenting(2, "Robot will weld at", weldPositionName);
 
-
 			// get interval for the position variable
-			// TODO: update to using hasmap, only cosmetical
+			// TODO: update to using hashmap, only cosmetic
 			AWrapper a = fixPoint.getFlowBefore(stmt);
 			Logger.logIndenting(2, "Abstract domain: " + a);
 			Interval positionInterval = null;
 			try {
-				positionInterval = a.elem.getBound(a.man, weldPositionName);
+				positionInterval = a.get().getBound(a.man, weldPositionName);
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
 			Logger.logIndenting(2, "Possible domain for", weldPositionName + ":", positionInterval);
 
-
 			// test interval against constraints
 			boolean satisfiesConstraint = false;
 			try {
 				// TODO: find robot associated with the JInvokeStmt and change constrainsInterval accordingly
-				satisfiesConstraint = a.elem.satisfy(a.man, weldPositionName, constraintsInterval);
+				satisfiesConstraint = a.get().satisfy(a.man, weldPositionName, constraintsInterval);
 			} catch (ApronException e) {
 				e.printStackTrace();
 			}
@@ -226,11 +222,10 @@ public class Verifier {
 
 	private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt) {
 		LinkedList<JInvokeStmt> stmts = new LinkedList<JInvokeStmt>();
-		
+
 		for (Unit op : ops) {
 			if (op instanceof JInvokeStmt) {
 				JInvokeStmt invoke = (JInvokeStmt) op;
-				Logger.log("Checking", invoke.getInvokeExpr().getMethod().getName(), "against", stmt);
 				if (invoke.getInvokeExpr().getMethod().getName().equals(stmt))
 					stmts.add(invoke);
 			}
