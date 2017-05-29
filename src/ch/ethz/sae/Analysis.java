@@ -353,6 +353,5 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	public String local_ints[]; // integer local variables of the method
 	public static String reals[] = { "x" };
 	public SootClass jclass;
-	private String class_ints[]; // integer class variables where the method is
-	// defined
+	private String class_ints[]; // integer class variables where the method is defined
 }
