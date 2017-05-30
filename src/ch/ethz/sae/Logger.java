@@ -28,22 +28,19 @@ public class Logger {
 		if (count == 0) {
 			System.out.println();
 		} else {
-			for (int i = 0; i < count - 1; i++)
-				print(objs[i] + " ");
-			println(objs[count - 1]);
+			for (int i = 0; i < count - 1; i++) {
+				print(objs[i]);
+				print(" ");
+			}
+			print(objs[count - 1]);
+			print("\n");
 		}
 	}
 	
-	private static void print(Object o){
-		if(o instanceof Interval && ((Interval)o).isBottom()){
+	private static void print(Object o) {
+		if (o instanceof Interval && ((Interval) o).isBottom())
 			System.out.print("[ - ]");
-		}else{
+		else
 			System.out.print(o);
-		}
-	}
-	
-	private static void println(Object o){
-		print(o);
-		System.out.println();
 	}
 }
