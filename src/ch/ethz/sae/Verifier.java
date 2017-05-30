@@ -7,7 +7,10 @@ import soot.*;
 import soot.jimple.*;
 import soot.jimple.internal.*;
 import soot.jimple.spark.SparkTransformer;
+import soot.jimple.spark.pag.LocalVarNode;
+import soot.jimple.spark.pag.Node;
 import soot.jimple.spark.pag.PAG;
+import soot.jimple.spark.pag.VarNode;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class Verifier {
@@ -17,7 +20,7 @@ public class Verifier {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = "Test_Inequality";// TODO args[0];
+		String analyzedClass = "Test_Reassigning";// TODO args[0];
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -49,6 +52,7 @@ public class Verifier {
 			}
 
 			Logger.log();
+			Logger.log();
 			Logger.log("%%%%%%%%%% END VERIFYING %%%%%%%%%%");
 			Logger.log();
 			Logger.log();
@@ -68,83 +72,69 @@ public class Verifier {
 	}
 	
 	private static boolean verifyCallsTo(String methodName, SootMethod method, Analysis fixPoint, PAG pointsTo) {
-		// TODO: Change to handle multiple robots! (possibly with a HashMap)
 		Logger.log("Verifying", methodName + "...");
 		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
-
-		// get robot constraints
-		Interval robotBounds = getRobotConstraints(ops);
-		Logger.logIndenting(1, "Robot is allowed to weld in", robotBounds);
-
-		// search for all calls to weldAt
-		LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName);
 		
-		return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, robotBounds);
+		// search for all calls to weldAt or weldBetween
+		LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName, pointsTo);
+		if(invocations.size() == 0){
+			Logger.logIndenting(1, "No calls to this method");
+			return true;
+		}
+		
+		// get original robot constraints
+		HashMap<String, Interval> robotConstraints = getRobotConstraints(ops);
+		Logger.logIndenting(1, "Original robot constraints:");
+		Logger.logIndenting(1, robotConstraints);
+		
+		return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, pointsTo, robotConstraints);
 	}
 	
-	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, Interval bounds) {
-		// TODO take a specific robot as argument
-		final boolean verbose = true;
-		
+	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<String, Interval> robotConstraints) {
 		// check constraints
 		Logger.logIndenting(1, "Checking constraints...");
+		
+		
 		for (JInvokeStmt stmt : invocations) {
+			String robotName = getRobotName(stmt);
+			Interval bounds = getCurrentConstraints(stmt, pointsTo, robotConstraints);
+			
 			AWrapper state = fixPoint.getFlowBefore(stmt);
 			InvokeExpr invoke = stmt.getInvokeExpr();
 			// this works for both weldAt and weldBetween
 			for (Value arg : invoke.getArgs()) {
+				Texpr1Node expr = Analysis.toExpr(arg);
+				if (expr == null)
+					break;
+				Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
+				Interval possibleValues = new Interval();
 				try {
-					Texpr1Node expr = Analysis.toExpr(arg);
-					if (expr == null)
-						break;
-					Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
-					Interval possibleValues = state.get().getBound(state.man, inContext);
-
-					if (verbose) Logger.logIndenting(2, "Possible welding values:", possibleValues);
-					
-					int comparison = bounds.cmp(possibleValues);
-					if (comparison != 0 && comparison != 1) // not equal and not contained
-						return false;
+					possibleValues = state.get().getBound(state.man, inContext);
 				} catch (ApronException e) {
 					Logger.log("Caught ApronException in verification:", e);
 				}
+				
+				Logger.logIndenting(3, "Robot", robotName, ": Allowed welding values:", bounds);
+				Logger.logIndenting(3, "Possible welding values:", possibleValues);
+				
+				int comparison = bounds.cmp(possibleValues);
+				if (comparison != 0 && comparison != 1) // not equal and not contained
+					return false;
 			}
+		Logger.log();
 		}
 		return true;
 	}
 
-	private static int toInt(Value value) {
-		if (value instanceof IntConstant) {
-			return ((IntConstant) value).value;
-		}
-		Logger.log("Could not convert value", value, "to IntConstant!");
-		return 0;
-	}
-
-	private static Interval getRobotConstraints(PatchingChain<Unit> ops) {
-		for (Unit op : ops) {
-			//search for initialization of the robot
-			if (op instanceof JInvokeStmt) {
-				InvokeExpr init = ((JInvokeStmt) op).getInvokeExpr();
-				if (init.getMethod().isConstructor()) {
-					// construct interval from arguments to robot constructor
-					return new Interval(toInt(init.getArg(0)), toInt(init.getArg(1)));
-				}
-			}
-		}
-
-		Logger.log("Something went wrong in finding the robot constraints!");
-		return new Interval(0, 0);
-	}
-
-	private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt) {
+	private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt, PAG pointsTo) {
 		LinkedList<JInvokeStmt> stmts = new LinkedList<JInvokeStmt>();
 
 		for (Unit op : ops) {
 			if (op instanceof JInvokeStmt) {
 				JInvokeStmt invoke = (JInvokeStmt) op;
-				if (invoke.getInvokeExpr().getMethod().getName().equals(stmt))
+				if (invoke.getInvokeExpr().getMethod().getName().equals(stmt)){
 					stmts.add(invoke);
+				}
 			}
 		}
 
@@ -156,6 +146,111 @@ public class Verifier {
 		c.setApplicationClass();
 		return c;
 	}
+	
+	private static int toInt(Value value) {
+		if (value instanceof IntConstant) {
+			return ((IntConstant) value).value;
+		}
+		Logger.log("Could not convert value", value, "to IntConstant!");
+		return 0;
+	}
+	
+	
+	private static HashMap<String, Interval> getRobotConstraints(PatchingChain<Unit> ops){
+		HashMap<String, Interval> constraints = new HashMap<String, Interval>();
+		for (Unit op : ops) {
+			//search for initialization of the robot
+			if (op instanceof JInvokeStmt) {
+				InvokeExpr init = ((JInvokeStmt) op).getInvokeExpr();
+				if (init.getMethod().isConstructor()) {
+					// construct interval from arguments to robot constructor
+					Interval interval = new Interval(toInt(init.getArg(0)), toInt(init.getArg(1)));
+					String robotName = getRobotName(init);
+					constraints.put(robotName, interval);
+				}
+			}
+		}
+		
+		return constraints;
+	}
+	
+	private static String getRobotName(Object stmt){
+		if(stmt instanceof JInvokeStmt){
+			return ((ValueBox)(((JInvokeStmt)stmt).getUseBoxes().get(0))).getValue().toString();
+		}else if(stmt instanceof InvokeExpr){
+			return ((ValueBox)(((InvokeExpr)stmt).getUseBoxes().get(0))).getValue().toString();
+		}
+		
+		return null;
+	}
+	
+	/*
+	 * Finds all possible objects the robot could point to and performs an
+	 * intersection of the according intervals
+	 */
+	private static Interval getCurrentConstraints(JInvokeStmt invoke, PAG pointsTo, HashMap<String, Interval> originalConstraints) {
+		
+		// Get all possible references
+		Value robotName = ((ValueBox)(invoke.getUseBoxes().get(0))).getValue();
+		VarNode robotNode = pointsTo.findLocalVarNode(robotName);
+		LinkedList<String> rootReferencePointers = findRootPointers(robotNode, pointsTo);
+		Logger.logIndenting(2, "Robot", robotName, "references", rootReferencePointers);
+		
+		// Calculate intersection
+		Interval intervalIntersected = new Interval();
+		intervalIntersected.setTop();
+		for(String robot : rootReferencePointers){
+			Interval interval = originalConstraints.get(robot);
+			intervalIntersected = intersectInterval(intervalIntersected, interval);
+		}
+		
+		return intervalIntersected;
+	}
+	
+	private static Interval intersectInterval(Interval i1, Interval i2){
+		Interval interval = new Interval();
+		interval.setBottom();
+		
+		// Check if intervals are disjunct
+		if(i1.sup.cmp(i2.inf) < 0 || i2.sup.cmp(i1.inf) < 0)
+			return interval;
+		
+		// Set lower bound
+		if(i1.inf.cmp(i2.inf) < 0){
+			interval.setInf(i2.inf);
+		}else{
+			interval.setInf(i1.inf);
+		}
+		
+		// Set upper bound
+		if(i1.sup.cmp(i2.sup) < 0){
+			interval.setSup(i1.sup);
+		}else{
+			interval.setSup(i2.sup);
+		}
+		
+		return interval;
+	}
+	
+	// Recursively finds all references node points to
+	private static LinkedList<String> findRootPointers(VarNode node, PAG pointsTo){
+		LinkedList<String> referencePointers = new LinkedList<String>();
+		Node[] pointerList = pointsTo.simpleInvLookup(node);
+		
+		if(pointerList.length == 0){
+			// Base case, node is already an object
+			referencePointers.add(((LocalVarNode) node).getVariable().toString());
+			
+		} else{
+			// Node points to multiple references
+			for(Node n : pointerList){
+				referencePointers.addAll(0, findRootPointers((VarNode) n, pointsTo)); 
+			}
+		}
+		
+		return referencePointers;
+	}
+	
 
 	// Performs Points-To Analysis
 	private static PAG doPointsToAnalysis(SootClass c) {

@@ -1,5 +1,7 @@
 package ch.ethz.sae;
 
+import apron.Interval;
+
 public class Logger {
 
 	public static final boolean LOG_DEBUG = true;
@@ -27,8 +29,21 @@ public class Logger {
 			System.out.println();
 		} else {
 			for (int i = 0; i < count - 1; i++)
-				System.out.print(objs[i] + " ");
-			System.out.println(objs[count - 1]);
+				print(objs[i] + " ");
+			println(objs[count - 1]);
 		}
+	}
+	
+	private static void print(Object o){
+		if(o instanceof Interval && ((Interval)o).isBottom()){
+			System.out.print("[ - ]");
+		}else{
+			System.out.print(o);
+		}
+	}
+	
+	private static void println(Object o){
+		print(o);
+		System.out.println();
 	}
 }
