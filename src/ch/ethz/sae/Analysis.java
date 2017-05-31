@@ -73,8 +73,8 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		recordIntLocalVars();
 		recordIntClassVars();
 
-		Logger.log("local vars:", Arrays.toString(local_ints));
-		Logger.log("class vars:", Arrays.toString(class_ints));
+		//Logger.log("local vars:", Arrays.toString(local_ints));
+		//Logger.log("class vars:", Arrays.toString(class_ints));
 
 		String ints[] = new String[local_ints.length + class_ints.length];
 
