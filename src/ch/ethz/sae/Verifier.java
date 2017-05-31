@@ -7,10 +7,7 @@ import soot.*;
 import soot.jimple.*;
 import soot.jimple.internal.*;
 import soot.jimple.spark.SparkTransformer;
-import soot.jimple.spark.pag.LocalVarNode;
-import soot.jimple.spark.pag.Node;
-import soot.jimple.spark.pag.PAG;
-import soot.jimple.spark.pag.VarNode;
+import soot.jimple.spark.pag.*;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class Verifier {
@@ -70,35 +67,35 @@ public class Verifier {
 			System.out.println(analyzedClass + " WELD_BETWEEN_NOT_OK");
 		}
 	}
-	
+
 	private static boolean verifyCallsTo(String methodName, SootMethod method, Analysis fixPoint, PAG pointsTo) {
 		Logger.log("Verifying", methodName + "...");
 		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
-		
+
 		// search for all calls to weldAt or weldBetween
 		LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName, pointsTo);
 		if(invocations.size() == 0){
 			Logger.logIndenting(1, "No calls to this method");
 			return true;
 		}
-		
+
 		// get original robot constraints
-		HashMap<String, Interval> robotConstraints = getRobotConstraints(ops);
+		HashMap<Value, Interval> robotConstraints = getRobotConstraints(ops);
 		Logger.logIndenting(1, "Original robot constraints:");
 		Logger.logIndenting(1, robotConstraints);
-		
+
 		return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, pointsTo, robotConstraints);
 	}
-	
-	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<String, Interval> robotConstraints) {
+
+	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<Value, Interval> robotConstraints) {
+		final boolean verbose = false;
 		// check constraints
 		Logger.logIndenting(1, "Checking constraints...");
-		
-		
+
 		for (JInvokeStmt stmt : invocations) {
-			String robotName = getRobotName(stmt);
 			Interval bounds = getCurrentConstraints(stmt, pointsTo, robotConstraints);
-			
+			if (verbose) Logger.logIndenting(3, "Robot", getCallee(stmt), ": Allowed welding values:", bounds);
+
 			AWrapper state = fixPoint.getFlowBefore(stmt);
 			InvokeExpr invoke = stmt.getInvokeExpr();
 			// this works for both weldAt and weldBetween
@@ -113,15 +110,14 @@ public class Verifier {
 				} catch (ApronException e) {
 					Logger.log("Caught ApronException in verification:", e);
 				}
-				
-				Logger.logIndenting(3, "Robot", robotName, ": Allowed welding values:", bounds);
+
 				Logger.logIndenting(3, "Possible welding values:", possibleValues);
-				
+
 				int comparison = bounds.cmp(possibleValues);
 				if (comparison != 0 && comparison != 1) // not equal and not contained
 					return false;
 			}
-		Logger.log();
+			Logger.log();
 		}
 		return true;
 	}
@@ -146,7 +142,7 @@ public class Verifier {
 		c.setApplicationClass();
 		return c;
 	}
-	
+
 	private static int toInt(Value value) {
 		if (value instanceof IntConstant) {
 			return ((IntConstant) value).value;
@@ -154,103 +150,104 @@ public class Verifier {
 		Logger.log("Could not convert value", value, "to IntConstant!");
 		return 0;
 	}
-	
-	
-	private static HashMap<String, Interval> getRobotConstraints(PatchingChain<Unit> ops){
-		HashMap<String, Interval> constraints = new HashMap<String, Interval>();
+
+
+	private static HashMap<Value, Interval> getRobotConstraints(PatchingChain<Unit> ops) {
+		HashMap<Value, Interval> constraints = new HashMap<Value, Interval>();
 		for (Unit op : ops) {
-			//search for initialization of the robot
+			// search for initialization of the robot
 			if (op instanceof JInvokeStmt) {
-				InvokeExpr init = ((JInvokeStmt) op).getInvokeExpr();
+				JInvokeStmt invoke = (JInvokeStmt) op;
+				InvokeExpr init = invoke.getInvokeExpr();
 				if (init.getMethod().isConstructor()) {
 					// construct interval from arguments to robot constructor
 					Interval interval = new Interval(toInt(init.getArg(0)), toInt(init.getArg(1)));
-					String robotName = getRobotName(init);
+					Value robotName = getCallee(invoke);
 					constraints.put(robotName, interval);
 				}
 			}
 		}
-		
+
 		return constraints;
 	}
-	
-	private static String getRobotName(Object stmt){
-		if(stmt instanceof JInvokeStmt){
-			return ((ValueBox)(((JInvokeStmt)stmt).getUseBoxes().get(0))).getValue().toString();
-		}else if(stmt instanceof InvokeExpr){
-			return ((ValueBox)(((InvokeExpr)stmt).getUseBoxes().get(0))).getValue().toString();
+
+	private static Value getCallee(JInvokeStmt stmt) {
+		if (!(stmt.getInvokeExpr() instanceof InstanceInvokeExpr)) {
+			Logger.log("InvokeExpr", stmt.getInvokeExpr(), "is not an InstanceInvokeExpr! D:");
+			return null;
 		}
-		
-		return null;
+		InstanceInvokeExpr invoke = (InstanceInvokeExpr) stmt.getInvokeExpr();
+		return invoke.getBase();
 	}
-	
+
 	/*
 	 * Finds all possible objects the robot could point to and performs an
 	 * intersection of the according intervals
 	 */
-	private static Interval getCurrentConstraints(JInvokeStmt invoke, PAG pointsTo, HashMap<String, Interval> originalConstraints) {
-		
+	private static Interval getCurrentConstraints(JInvokeStmt invoke, PAG pointsTo, HashMap<Value, Interval> originalConstraints) {
 		// Get all possible references
-		Value robotName = ((ValueBox)(invoke.getUseBoxes().get(0))).getValue();
-		VarNode robotNode = pointsTo.findLocalVarNode(robotName);
-		LinkedList<String> rootReferencePointers = findRootPointers(robotNode, pointsTo);
-		Logger.logIndenting(2, "Robot", robotName, "references", rootReferencePointers);
-		
+		Value robot = getCallee(invoke);
+		VarNode robotNode = pointsTo.findLocalVarNode(robot);
+		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode, pointsTo);
+		Logger.logIndenting(2, "Robot", robot, "references", rootReferencePointers);
+
 		// Calculate intersection
 		Interval intervalIntersected = new Interval();
 		intervalIntersected.setTop();
-		for(String robot : rootReferencePointers){
-			Interval interval = originalConstraints.get(robot);
+		for(Value robotName : rootReferencePointers){
+			Interval interval = originalConstraints.get(robotName);
 			intervalIntersected = intersectInterval(intervalIntersected, interval);
 		}
-		
+
 		return intervalIntersected;
 	}
-	
-	private static Interval intersectInterval(Interval i1, Interval i2){
+
+	// can't believe there's no built-in for this
+	private static Interval intersectInterval(Interval i1, Interval i2) {
 		Interval interval = new Interval();
 		interval.setBottom();
-		
-		// Check if intervals are disjunct
+
+		// Check if intervals are disjoint
 		if(i1.sup.cmp(i2.inf) < 0 || i2.sup.cmp(i1.inf) < 0)
 			return interval;
-		
+
 		// Set lower bound
-		if(i1.inf.cmp(i2.inf) < 0){
+		if(i1.inf.cmp(i2.inf) < 0)
 			interval.setInf(i2.inf);
-		}else{
+		else
 			interval.setInf(i1.inf);
-		}
-		
+
 		// Set upper bound
-		if(i1.sup.cmp(i2.sup) < 0){
+		if(i1.sup.cmp(i2.sup) < 0)
 			interval.setSup(i1.sup);
-		}else{
+		else
 			interval.setSup(i2.sup);
-		}
+
+		Logger.log("Calculated interval:", interval);
+		Logger.log("Alternative:", i1);
 		
 		return interval;
 	}
-	
+
 	// Recursively finds all references node points to
-	private static LinkedList<String> findRootPointers(VarNode node, PAG pointsTo){
-		LinkedList<String> referencePointers = new LinkedList<String>();
+	private static LinkedList<Value> findRootPointers(VarNode node, PAG pointsTo) {
+		LinkedList<Value> referencePointers = new LinkedList<Value>();
 		Node[] pointerList = pointsTo.simpleInvLookup(node);
-		
-		if(pointerList.length == 0){
+
+		if (pointerList.length == 0) {
 			// Base case, node is already an object
-			referencePointers.add(((LocalVarNode) node).getVariable().toString());
-			
-		} else{
+			LocalVarNode varNode = (LocalVarNode) node;
+			referencePointers.add((Value) varNode.getVariable());
+		} else {
 			// Node points to multiple references
-			for(Node n : pointerList){
+			for (Node n : pointerList) {
 				referencePointers.addAll(0, findRootPointers((VarNode) n, pointsTo)); 
 			}
 		}
-		
+
 		return referencePointers;
 	}
-	
+
 
 	// Performs Points-To Analysis
 	private static PAG doPointsToAnalysis(SootClass c) {
