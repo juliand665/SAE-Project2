@@ -17,7 +17,7 @@ public class Verifier {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = "Test_Reassigning";// TODO args[0];
+		String analyzedClass = "Test_1";// TODO args[0];
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -35,23 +35,17 @@ public class Verifier {
 			analysis.run();
 
 			Logger.log();
-			Logger.log();
-			Logger.log("%%%%%%%%% BEGIN VERIFYING %%%%%%%%%");
-			Logger.log();
+			Logger.log("BEGIN VERIFYING");
 			Logger.log();
 
 			if (!verifyCallsTo("weldAt", method, analysis, pointsToAnalysis)) {
 				weldAtFlag = 0;
 			}
-			Logger.log();
 			if (!verifyCallsTo("weldBetween", method, analysis, pointsToAnalysis)) {
 				weldBetweenFlag = 0;
 			}
 
-			Logger.log();
-			Logger.log();
-			Logger.log("%%%%%%%%%% END VERIFYING %%%%%%%%%%");
-			Logger.log();
+			Logger.log("END VERIFYING");
 			Logger.log();
 		}
 
@@ -187,6 +181,10 @@ public class Verifier {
 		// Get all possible references
 		Value robot = getCallee(invoke);
 		VarNode robotNode = pointsTo.findLocalVarNode(robot);
+		
+		// TODO
+		Logger.logIndenting(2, "reaching:", pointsTo.reachingObjects(invoke, (Local) robotNode.getVariable()));
+		
 		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode, pointsTo);
 		Logger.logIndenting(2, "Robot", robot, "references", rootReferencePointers);
 
