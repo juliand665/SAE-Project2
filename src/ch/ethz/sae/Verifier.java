@@ -81,8 +81,7 @@ public class Verifier {
 
 		// get original robot constraints
 		HashMap<Value, Interval> robotConstraints = getRobotConstraints(ops);
-		Logger.logIndenting(1, "Original robot constraints:");
-		Logger.logIndenting(1, robotConstraints);
+		Logger.logIndenting(1, "Original robot constraints:", robotConstraints);
 
 		return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, pointsTo, robotConstraints);
 	}
@@ -222,9 +221,6 @@ public class Verifier {
 			interval.setSup(i1.sup);
 		else
 			interval.setSup(i2.sup);
-
-		Logger.log("Calculated interval:", interval);
-		Logger.log("Alternative:", i1);
 		
 		return interval;
 	}
