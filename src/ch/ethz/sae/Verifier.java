@@ -17,7 +17,7 @@ public class Verifier {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = "Test_1";// TODO args[0];
+		String analyzedClass = "Test_SimpleReassignment";// TODO args[0];
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -41,9 +41,12 @@ public class Verifier {
 			if (!verifyCallsTo("weldAt", method, analysis, pointsToAnalysis)) {
 				weldAtFlag = 0;
 			}
+			Logger.log();
+			
 			if (!verifyCallsTo("weldBetween", method, analysis, pointsToAnalysis)) {
 				weldBetweenFlag = 0;
 			}
+			Logger.log();
 
 			Logger.log("END VERIFYING");
 			Logger.log();
@@ -66,10 +69,10 @@ public class Verifier {
 		Logger.log("Verifying", methodName + "...");
 		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
 
-		// search for all calls to weldAt or weldBetween
+		// search for all calls to the method
 		LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName, pointsTo);
-		if(invocations.size() == 0){
-			Logger.logIndenting(1, "No calls to this method");
+		if (invocations.isEmpty()) {
+			Logger.logIndenting(1, "No calls to", methodName);
 			return true;
 		}
 
@@ -110,7 +113,6 @@ public class Verifier {
 				if (comparison != 0 && comparison != 1) // not equal and not contained
 					return false;
 			}
-			Logger.log();
 		}
 		return true;
 	}
@@ -143,7 +145,6 @@ public class Verifier {
 		Logger.log("Could not convert value", value, "to IntConstant!");
 		return 0;
 	}
-
 
 	private static HashMap<Value, Interval> getRobotConstraints(PatchingChain<Unit> ops) {
 		HashMap<Value, Interval> constraints = new HashMap<Value, Interval>();
@@ -182,8 +183,9 @@ public class Verifier {
 		Value robot = getCallee(invoke);
 		VarNode robotNode = pointsTo.findLocalVarNode(robot);
 		
-		// TODO
-		Logger.logIndenting(2, "reaching:", pointsTo.reachingObjects(invoke, (Local) robotNode.getVariable()));
+		/* TODO this should work with context but doesn't! Although it looks like without context is just as precise...
+		Logger.logIndenting(2, "reaching without context:", pointsTo.reachingObjects((Local) robotNode.getVariable()),
+				"// with context:", pointsTo.reachingObjects(invoke, (Local) robotNode.getVariable()));*/
 		
 		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode, pointsTo);
 		Logger.logIndenting(2, "Robot", robot, "references", rootReferencePointers);
@@ -241,7 +243,6 @@ public class Verifier {
 
 		return referencePointers;
 	}
-
 
 	// Performs Points-To Analysis
 	private static PAG doPointsToAnalysis(SootClass c) {

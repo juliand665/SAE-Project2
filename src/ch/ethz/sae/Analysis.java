@@ -228,6 +228,8 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			} catch (Exception e) {
 				Logger.log("Error while trying to log:", e);
 			}
+		else
+			Logger.logIndenting(1, op);
 
 		try {
 			Abstract1 fall = new Abstract1(man, in.get());
