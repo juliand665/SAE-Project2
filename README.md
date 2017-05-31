@@ -7,5 +7,5 @@ Because everyone loves java and having to work in a VM with 10 fps (using a mac)
 
 # To Do
 
-- Handle multiple robots (using the PAG)
+- (Handle multiple robots) (almost done)
 - Write unit tests
