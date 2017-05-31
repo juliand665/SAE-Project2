@@ -17,7 +17,7 @@ public class Verifier {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = "Test_SimpleReassignment";// TODO args[0];
+		String analyzedClass = "Test_WhileAndBreak";// TODO args[0];
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -84,13 +84,14 @@ public class Verifier {
 	}
 
 	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<Value, Interval> robotConstraints) {
-		final boolean verbose = false;
+		final boolean verbose = true;
+		boolean constraintsViolated = false;
 		// check constraints
 		Logger.logIndenting(1, "Checking constraints...");
 
 		for (JInvokeStmt stmt : invocations) {
 			Interval bounds = getCurrentConstraints(stmt, pointsTo, robotConstraints);
-			if (verbose) Logger.logIndenting(3, "Robot", getCallee(stmt), ": Allowed welding values:", bounds);
+			if (verbose) Logger.logIndenting(3, "Allowed welding values:\t", bounds);
 
 			AWrapper state = fixPoint.getFlowBefore(stmt);
 			InvokeExpr invoke = stmt.getInvokeExpr();
@@ -107,14 +108,17 @@ public class Verifier {
 					Logger.log("Caught ApronException in verification:", e);
 				}
 
-				Logger.logIndenting(3, "Possible welding values:", possibleValues);
+				Logger.logIndenting(3, "Possible welding values:\t", possibleValues);
 
 				int comparison = bounds.cmp(possibleValues);
-				if (comparison != 0 && comparison != 1) // not equal and not contained
-					return false;
+				if (comparison != 0 && comparison != 1){ // not equal and not contained
+					constraintsViolated = true;
+					Logger.log("----> CONSTRAINT VIOLATED!");
+				}
 			}
+			Logger.log();
 		}
-		return true;
+		return !constraintsViolated;
 	}
 
 	private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt, PAG pointsTo) {
@@ -183,9 +187,12 @@ public class Verifier {
 		Value robot = getCallee(invoke);
 		VarNode robotNode = pointsTo.findLocalVarNode(robot);
 		
-		/* TODO this should work with context but doesn't! Although it looks like without context is just as precise...
-		Logger.logIndenting(2, "reaching without context:", pointsTo.reachingObjects((Local) robotNode.getVariable()),
-				"// with context:", pointsTo.reachingObjects(invoke, (Local) robotNode.getVariable()));*/
+		/* TODO:
+		 * Context does not seem to be necessary as robots in different JInvokeStmt are treated
+		 * as different objects by soot. Might be because of the pointer analysis.
+		 * 
+		 * pointsTo.reachingObjects(invoke, (Local) robotNode.getVariable()));
+		 */
 		
 		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode, pointsTo);
 		Logger.logIndenting(2, "Robot", robot, "references", rootReferencePointers);
@@ -203,8 +210,7 @@ public class Verifier {
 
 	// can't believe there's no built-in for this
 	private static Interval intersectInterval(Interval i1, Interval i2) {
-		Interval interval = new Interval();
-		interval.setBottom();
+		Interval interval = new Interval(1.0, -1.0);
 
 		// Check if intervals are disjoint
 		if(i1.sup.cmp(i2.inf) < 0 || i2.sup.cmp(i1.inf) < 0)
