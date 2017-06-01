@@ -8,6 +8,9 @@ import soot.jimple.*;
 import soot.jimple.internal.*;
 import soot.jimple.spark.SparkTransformer;
 import soot.jimple.spark.pag.*;
+import soot.jimple.spark.sets.DoublePointsToSet;
+import soot.jimple.spark.sets.HybridPointsToSet;
+import soot.jimple.spark.sets.P2SetVisitor;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class Verifier {
@@ -24,7 +27,7 @@ public class Verifier {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = "Test_ArgOverlap";
+		String analyzedClass = args[0];// TODO args[0];
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -49,7 +52,7 @@ public class Verifier {
 				weldAtFlag = 0;
 			}
 			Logger.log();
-			
+
 			if (!verifyCallsTo("weldBetween", method, analysis, pointsToAnalysis)) {
 				weldBetweenFlag = 0;
 			}
@@ -73,21 +76,26 @@ public class Verifier {
 	}
 
 	private static boolean verifyCallsTo(String methodName, SootMethod method, Analysis fixPoint, PAG pointsTo) {
-		Logger.log("Verifying", methodName + "...");
-		PatchingChain<Unit> ops = method.getActiveBody().getUnits();
+		try {
+			Logger.log("Verifying", methodName + "...");
+			PatchingChain<Unit> ops = method.getActiveBody().getUnits();
 
-		// search for all calls to the method
-		LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName, pointsTo);
-		if (invocations.isEmpty()) {
-			Logger.logIndenting(1, "No calls to", methodName);
-			return true;
+			// search for all calls to the method
+			LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName, pointsTo);
+			if (invocations.isEmpty()) {
+				Logger.logIndenting(1, "No calls to", methodName);
+				return true;
+			}
+
+			// get original robot constraints
+			HashMap<Value, Interval> robotConstraints = getRobotConstraints(ops);
+			Logger.logIndenting(1, "Original robot constraints:", robotConstraints);
+
+			return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, pointsTo, robotConstraints);
+		} catch (Exception e) {
+			Logger.log("Returning false because I caught an exception:", e);
+			return false;
 		}
-
-		// get original robot constraints
-		HashMap<Value, Interval> robotConstraints = getRobotConstraints(ops);
-		Logger.logIndenting(1, "Original robot constraints:", robotConstraints);
-
-		return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, pointsTo, robotConstraints);
 	}
 
 	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<Value, Interval> robotConstraints) {
@@ -225,14 +233,22 @@ public class Verifier {
 		// Get all possible references
 		Value robot = getCallee(invoke);
 		VarNode robotNode = pointsTo.findLocalVarNode(robot);
-		
+
 		/* TODO:
 		 * Context does not seem to be necessary as robots in different JInvokeStmt are treated
 		 * as different objects by soot. Might be because of the pointer analysis.
 		 * 
 		 * pointsTo.reachingObjects(invoke, (Local) robotNode.getVariable()));
 		 */
-		
+		Logger.logIndenting(2, "Points to:");
+		DoublePointsToSet allocs = (DoublePointsToSet) pointsTo.reachingObjects((Local) robotNode.getVariable());
+		HybridPointsToSet hybrid = (HybridPointsToSet) allocs.getOldSet();
+		hybrid.forall(new P2SetVisitor() {
+			public void visit(Node n) {
+				Logger.logIndenting(3, n);
+			}
+		});
+
 		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode, pointsTo);
 		Logger.logIndenting(2, "Robot", robot, "references", rootReferencePointers);
 
@@ -266,7 +282,7 @@ public class Verifier {
 			interval.setSup(i1.sup);
 		else
 			interval.setSup(i2.sup);
-		
+
 		return interval;
 	}
 
