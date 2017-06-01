@@ -302,7 +302,11 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 				if (count.value < WIDENING_THRESHOLD) {
 					a3 = a1.joinCopy(man, a2);
 				} else {
-					a3 = a1.widening(man, a2);
+					Logger.log("widening", a1, "with", a2);
+					if (a1.isTop(man) && a2.isBottom(man))
+						a3 = a2; // TODO should we pick a1 or a2?
+					else
+						a3 = a1.widening(man, a2);
 				}
 			} else {
 				a3 = a1.joinCopy(man, a2);
