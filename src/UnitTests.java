@@ -29,7 +29,7 @@ public class UnitTests {
 		Object[][] data = new Object[][] { 
 				// TESTNAME, WELDAT, WELDBETWEEN
 				{"Test_1", true, true},
-				{"Test_2", true, true}, 
+				{"Test_2", true, true},
 				{"Test_3", false, true},
 				{"Test_WhileAndBreak", false, true}
 		};
@@ -45,7 +45,7 @@ public class UnitTests {
 	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
 
 	@Test
-	public void Test() {
+	public void test() {
 		// The correct results of weldAt and weldBetween
 		boolean expectedWeldAt = mExpWeldAt;
 		boolean expectedWeldBetween = mExpWeldBet;

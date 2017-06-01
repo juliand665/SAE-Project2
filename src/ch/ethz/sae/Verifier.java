@@ -20,7 +20,7 @@ public class Verifier {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = "Test_Reassigning";// TODO args[0];
+		String analyzedClass = args[0];
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -206,7 +206,11 @@ public class Verifier {
 		HybridPointsToSet hybrid = (HybridPointsToSet) allocs.getOldSet();
 		hybrid.forall(new P2SetVisitor() {
 			public void visit(Node n) {
-				Logger.logIndenting(3, n);
+				AllocNode alloc = (AllocNode) n;
+				//JNewExpr newExpr = (JNewExpr) alloc.getNewExpr();
+				Logger.logIndenting(3, "FieldRefs:", alloc.getAllFieldRefs());
+				Logger.logIndenting(3, "Fields:", alloc.getFields());
+				Logger.logIndenting(3, "Method:", alloc.getMethod());
 			}
 		});
 
@@ -216,7 +220,7 @@ public class Verifier {
 		// Calculate intersection
 		Interval intervalIntersected = new Interval();
 		intervalIntersected.setTop();
-		for(Value robotName : rootReferencePointers){
+		for (Value robotName : rootReferencePointers) {
 			Interval interval = originalConstraints.get(robotName);
 			intervalIntersected = intersectInterval(intervalIntersected, interval);
 		}
