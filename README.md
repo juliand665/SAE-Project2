@@ -7,6 +7,7 @@ Because everyone loves java and having to work in a VM with 10 fps (using a mac)
 
 # To Do
 
-- (Handle multiple robots) (almost done)
-- Test_Loops and Test_WhileAndBreak yield unsatisfying results, seem very imprecise (at least it's sound)
-- Write unit tests
+- Fix argument overlap detection, use expression of Polka instead of intervals (way too imprecise, see Test_ArgOverlap)
+- Fix crash for certain programs as inputs (see Test_CrashJRE)
+- Fix issue with equality in while statement (see Test_WhileAndBreak)
+- (Handle multiple robots (almost done))

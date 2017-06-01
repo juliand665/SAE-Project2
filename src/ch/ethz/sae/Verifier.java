@@ -11,13 +11,20 @@ import soot.jimple.spark.pag.*;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class Verifier {
+	/*TODO:
+	 *  - Fix crash for certain programs as inputs
+	 *    Test_CrashJRE
+	 *    
+	 *  - Fix argument overlap detection
+	 *    Test_ArgOverlap
+	 */
 
 	public static void main(String[] args) {
 		if (args.length != 1) {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = args[0];// TODO args[0];
+		String analyzedClass = "Test_ArgOverlap";
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -92,33 +99,65 @@ public class Verifier {
 		for (JInvokeStmt stmt : invocations) {
 			Interval bounds = getCurrentConstraints(stmt, pointsTo, robotConstraints);
 			if (verbose) Logger.logIndenting(3, "Allowed welding values:\t", bounds);
-
+			
 			AWrapper state = fixPoint.getFlowBefore(stmt);
 			InvokeExpr invoke = stmt.getInvokeExpr();
-			// this works for both weldAt and weldBetween
+			
+			// Check if individual welds violate constraints
 			for (Value arg : invoke.getArgs()) {
-				Texpr1Node expr = Analysis.toExpr(arg);
-				if (expr == null)
-					break;
-				Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
-				Interval possibleValues = new Interval();
-				try {
-					possibleValues = state.get().getBound(state.man, inContext);
-				} catch (ApronException e) {
-					Logger.log("Caught ApronException in verification:", e);
-				}
+				Interval possibleValues = getBoundsForArg(state, arg);
 
 				Logger.logIndenting(3, "Possible welding values:\t", possibleValues);
 
 				int comparison = bounds.cmp(possibleValues);
 				if (comparison != 0 && comparison != 1){ // not equal and not contained
 					constraintsViolated = true;
-					Logger.log("----> CONSTRAINT VIOLATED!");
+					Logger.logConstraintViolation();
 				}
 			}
+			
+			// Check if, for weldBetween, arguments do not overlap
+			constraintsViolated |= doArgsOverlap(state, invoke);
 			Logger.log();
 		}
 		return !constraintsViolated;
+	}
+	
+	/*
+	 * TODO: this needs to be handled differently, intervals are way too imprecise
+	 * (see Test_ArgOverlap for brutal overapproximation)
+	 */
+	private static boolean doArgsOverlap(AWrapper state, InvokeExpr invoke){
+		List<Value> args = invoke.getArgs();
+		if(args.size() == 1)
+				return false;
+
+		Interval boundsLeft = getBoundsForArg(state, args.get(0));
+		Interval boundsRight = getBoundsForArg(state, args.get(1));
+		if(boundsLeft.sup.cmp(boundsRight.inf) < 0)
+			return false;
+
+		Logger.logConstraintViolation("ARGUMENT OVERLAP");
+		return true;
+	}
+	
+	public static Interval getBoundsForArg(AWrapper state, Value arg){
+		Texpr1Node expr = Analysis.toExpr(arg);
+		// TODO: Better handling of this error?:/
+		if (expr == null){
+			Logger.log("Something went a bit wrong here I guess");
+			return new Interval();
+		}
+		Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
+		Interval possibleValues = new Interval();
+		try {
+			possibleValues = state.get().getBound(state.man, inContext);
+		} catch (ApronException e) {
+			Logger.log("Caught ApronException in verification:", e);
+		}
+		
+		
+		return possibleValues;
 	}
 
 	private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt, PAG pointsTo) {
