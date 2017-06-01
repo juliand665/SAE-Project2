@@ -45,4 +45,10 @@ public class Logger {
 		}*/ else
 			System.out.print(o);
 	}
+	
+	public static void logConstraintViolation(Object... objs){
+		Logger.log("----> CONSTRAINT VIOLATION!");
+		if(objs.length != 0)
+			logIndenting(4, objs);
+	}
 }
