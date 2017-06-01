@@ -40,9 +40,9 @@ public class Logger {
 	private static void print(Object o) {
 		if (o instanceof Interval && ((Interval) o).isBottom()){
 			System.out.print("[ ]");
-		} else if(o instanceof Interval && ((Interval) o).isTop()){
+		} /*else if (o instanceof Interval && ((Interval) o).isTop()) {
 			System.out.print("[ TOP ]");
-		} else
+		}*/ else
 			System.out.print(o);
 	}
 }
