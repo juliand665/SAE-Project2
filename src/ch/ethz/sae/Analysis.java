@@ -207,7 +207,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		Texpr1BinNode sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, negated ? r : l, negated ? l : r);
 		int cons;
 		if (equality)
-			cons = negated ? Tcons1.DISEQ : Tcons1.EQ;
+			cons = negated ? Tcons1.DISEQ : Tcons1.EQ; // TODO better inequality handlingsa
 		else
 			cons = strict ? Tcons1.SUP : Tcons1.SUPEQ;
 		// something not to be confused by: SUP is just SUPEQ with the bound adjusted by one

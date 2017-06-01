@@ -27,7 +27,7 @@ public class Verifier {
 			System.err.println("Usage: java -classpath soot-2.5.0.jar:./bin ch.ethz.sae.Verifier <class to test>");
 			System.exit(-1);
 		}
-		String analyzedClass = args[0];// TODO args[0];
+		String analyzedClass = args[0];
 		SootClass c = loadClass(analyzedClass);
 
 		PAG pointsToAnalysis = doPointsToAnalysis(c);
@@ -98,74 +98,67 @@ public class Verifier {
 		}
 	}
 
-	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<Value, Interval> robotConstraints) {
+	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<Value, Interval> robotConstraints) throws ApronException {
 		final boolean verbose = true;
 		boolean constraintsViolated = false;
-		// check constraints
 		Logger.logIndenting(1, "Checking constraints...");
 
 		for (JInvokeStmt stmt : invocations) {
 			Interval bounds = getCurrentConstraints(stmt, pointsTo, robotConstraints);
-			if (verbose) Logger.logIndenting(3, "Allowed welding values:\t", bounds);
+			Texpr1Node lo = new Texpr1CstNode(bounds.inf);
+			Texpr1Node hi = new Texpr1CstNode(bounds.sup);
 			
 			AWrapper state = fixPoint.getFlowBefore(stmt);
 			InvokeExpr invoke = stmt.getInvokeExpr();
+			List<Value> args = invoke.getArgs();
+
+			if (verbose) {
+				Logger.logIndenting(3, "Allowed welding values:\t", bounds);
+			}
 			
 			// Check if individual welds violate constraints
-			for (Value arg : invoke.getArgs()) {
-				Interval possibleValues = getBoundsForArg(state, arg);
-
-				Logger.logIndenting(3, "Possible welding values:\t", possibleValues);
-
-				int comparison = bounds.cmp(possibleValues);
-				if (comparison != 0 && comparison != 1){ // not equal and not contained
+			for (Value arg : args) {
+				Texpr1Node expr = Analysis.toExpr(arg);
+				
+				if (verbose) {
+					Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
+					Logger.logIndenting(4, "Possible values for", arg, "are", state.get().getBound(state.man, inContext), "(grossly overapproximated)");
+				}
+				
+				if (!isLessThan(false, state, lo, expr) || !isLessThan(false, state, expr, hi)) {
 					constraintsViolated = true;
+					if (!verbose) return false;
 					Logger.logConstraintViolation();
 				}
 			}
 			
 			// Check if, for weldBetween, arguments do not overlap
-			constraintsViolated |= doArgsOverlap(state, invoke);
+			constraintsViolated = constraintsViolated || doArgsOverlap(state, args);
 			Logger.log();
 		}
 		return !constraintsViolated;
 	}
 	
-	/*
-	 * TODO: this needs to be handled differently, intervals are way too imprecise
-	 * (see Test_ArgOverlap for brutal overapproximation)
-	 */
-	private static boolean doArgsOverlap(AWrapper state, InvokeExpr invoke){
-		List<Value> args = invoke.getArgs();
-		if(args.size() == 1)
-				return false;
-
-		Interval boundsLeft = getBoundsForArg(state, args.get(0));
-		Interval boundsRight = getBoundsForArg(state, args.get(1));
-		if(boundsLeft.sup.cmp(boundsRight.inf) < 0)
-			return false;
-
-		Logger.logConstraintViolation("ARGUMENT OVERLAP");
-		return true;
+	private static boolean doArgsOverlap(AWrapper state, List<Value> args) throws ApronException {
+		// only check for weldBetween
+		if (args.size() == 2 && !isLessThan(true, state, args.get(0), args.get(1))) {
+			Logger.logConstraintViolation("weldBetween arguments overlap!");
+			return true;
+		}
+		return false;
 	}
 	
-	public static Interval getBoundsForArg(AWrapper state, Value arg){
-		Texpr1Node expr = Analysis.toExpr(arg);
-		// TODO: Better handling of this error?:/
-		if (expr == null){
-			Logger.log("Something went a bit wrong here I guess");
-			return new Interval();
-		}
-		Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
-		Interval possibleValues = new Interval();
-		try {
-			possibleValues = state.get().getBound(state.man, inContext);
-		} catch (ApronException e) {
-			Logger.log("Caught ApronException in verification:", e);
-		}
-		
-		
-		return possibleValues;
+	private static boolean isLessThan(boolean strict, AWrapper state, Value l, Value r) throws ApronException {
+		Texpr1Node lhs = Analysis.toExpr(l);
+		Texpr1Node rhs = Analysis.toExpr(r);
+		return isLessThan(strict, state, lhs, rhs);
+	}
+	
+	private static boolean isLessThan(boolean strict, AWrapper state, Texpr1Node l, Texpr1Node r) throws ApronException {
+		Texpr1Node sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, r, l);
+		int op = strict ? Tcons1.SUP : Tcons1.SUPEQ;
+		Tcons1 constraint = new Tcons1(state.get().getEnvironment(), op, sub);
+		return state.get().satisfy(state.man, constraint);
 	}
 
 	private static LinkedList<JInvokeStmt> getInvokeCalls(PatchingChain<Unit> ops, String stmt, PAG pointsTo) {
