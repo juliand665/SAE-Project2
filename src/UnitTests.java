@@ -39,12 +39,14 @@ public class UnitTests {
 
 	@Before
 	public void setup() {
+		stdOut = System.out;
 		System.setOut(new PrintStream(outContent));
 	}
 
 	// The output that's printed to the console.
 	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-
+	private PrintStream stdOut;
+	
 	@Test
 	public void test() {
 		// The correct results of weldAt and weldBetween
@@ -58,6 +60,7 @@ public class UnitTests {
 
 		// split up the output
 		String[] lines = outContent.toString().split("\n");
+		stdOut.print(outContent);
 
 		boolean actualWeldAt = false;
 		if (lines[lines.length - 2].equals(mNameOfClass + " WELD_AT_OK"))

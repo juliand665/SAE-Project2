@@ -122,7 +122,7 @@ public class Verifier {
 				
 				if (verbose) {
 					Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
-					Logger.logIndenting(4, "Possible values for", arg, "are", state.get().getBound(state.man, inContext), "(grossly overapproximated)");
+					Logger.logIndenting(4, "Possible values for", arg + ":\t", state.get().getBound(state.man, inContext), "(overapproximated)");
 				}
 				
 				if (!isLessThan(false, state, lo, expr) || !isLessThan(false, state, expr, hi)) {
