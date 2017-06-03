@@ -43,23 +43,19 @@ public class Verifier {
 			}
 			Analysis analysis = new Analysis(new BriefUnitGraph(method.retrieveActiveBody()), c);
 			analysis.run();
-
-			Logger.log();
-			Logger.log("BEGIN VERIFYING");
+			
 			Logger.log();
 
-			if (!verifyCallsTo("weldAt", method, analysis, pointsToAnalysis)) {
+			PatchingChain<Unit> ops = method.getActiveBody().getUnits();
+			initializeRobotConstraints(ops);
+			
+			if (!verifyCallsTo("weldAt", ops, analysis, pointsToAnalysis)) {
 				weldAtFlag = 0;
 			}
-			Logger.log();
 
-			if (!verifyCallsTo("weldBetween", method, analysis, pointsToAnalysis)) {
+			if (!verifyCallsTo("weldBetween", ops, analysis, pointsToAnalysis)) {
 				weldBetweenFlag = 0;
 			}
-			Logger.log();
-
-			Logger.log("END VERIFYING");
-			Logger.log();
 		}
 
 		// Do not change the output format
@@ -74,11 +70,31 @@ public class Verifier {
 			System.out.println(analyzedClass + " WELD_BETWEEN_NOT_OK");
 		}
 	}
+	
+	static HashMap<Value, Interval> robotConstraints;
 
-	private static boolean verifyCallsTo(String methodName, SootMethod method, Analysis fixPoint, PAG pointsTo) {
+	private static void initializeRobotConstraints(PatchingChain<Unit> ops) {
+		robotConstraints = new HashMap<Value, Interval>();
+		for (Unit op : ops) {
+			// search for initialization of the robot
+			if (op instanceof JInvokeStmt) {
+				JInvokeStmt invoke = (JInvokeStmt) op;
+				InvokeExpr init = invoke.getInvokeExpr();
+				if (init.getMethod().isConstructor()) {
+					// construct interval from arguments to robot constructor
+					Interval interval = new Interval(toInt(init.getArg(0)), toInt(init.getArg(1)));
+					Value robotName = getCallee(invoke);
+					robotConstraints.put(robotName, interval);
+				}
+			}
+		}
+		Logger.log("Original robot constraints:", robotConstraints);
+		Logger.log();
+	}
+
+	private static boolean verifyCallsTo(String methodName, PatchingChain<Unit> ops, Analysis fixPoint, PAG pointsTo) {
 		try {
 			Logger.log("Verifying", methodName + "...");
-			PatchingChain<Unit> ops = method.getActiveBody().getUnits();
 
 			// search for all calls to the method
 			LinkedList<JInvokeStmt> invocations = getInvokeCalls(ops, methodName, pointsTo);
@@ -87,24 +103,20 @@ public class Verifier {
 				return true;
 			}
 
-			// get original robot constraints
-			HashMap<Value, Interval> robotConstraints = getRobotConstraints(ops);
-			Logger.logIndenting(1, "Original robot constraints:", robotConstraints);
-
-			return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, pointsTo, robotConstraints);
+			return doArgsOfInvocationsLieWithinBounds(fixPoint, invocations, pointsTo);
 		} catch (Exception e) {
 			Logger.log("Returning false because I caught an exception:", e);
 			return false;
 		}
 	}
 
-	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo, HashMap<Value, Interval> robotConstraints) throws ApronException {
+	private static boolean doArgsOfInvocationsLieWithinBounds(Analysis fixPoint, List<JInvokeStmt> invocations, PAG pointsTo) throws ApronException {
 		final boolean verbose = true;
 		boolean constraintsViolated = false;
 		Logger.logIndenting(1, "Checking constraints...");
 
 		for (JInvokeStmt stmt : invocations) {
-			Interval bounds = getCurrentConstraints(stmt, pointsTo, robotConstraints);
+			Interval bounds = getCurrentConstraints(stmt, pointsTo);
 			Texpr1Node lo = new Texpr1CstNode(bounds.inf);
 			Texpr1Node hi = new Texpr1CstNode(bounds.sup);
 			
@@ -190,25 +202,6 @@ public class Verifier {
 		return 0;
 	}
 
-	private static HashMap<Value, Interval> getRobotConstraints(PatchingChain<Unit> ops) {
-		HashMap<Value, Interval> constraints = new HashMap<Value, Interval>();
-		for (Unit op : ops) {
-			// search for initialization of the robot
-			if (op instanceof JInvokeStmt) {
-				JInvokeStmt invoke = (JInvokeStmt) op;
-				InvokeExpr init = invoke.getInvokeExpr();
-				if (init.getMethod().isConstructor()) {
-					// construct interval from arguments to robot constructor
-					Interval interval = new Interval(toInt(init.getArg(0)), toInt(init.getArg(1)));
-					Value robotName = getCallee(invoke);
-					constraints.put(robotName, interval);
-				}
-			}
-		}
-
-		return constraints;
-	}
-
 	private static Value getCallee(JInvokeStmt stmt) {
 		if (!(stmt.getInvokeExpr() instanceof InstanceInvokeExpr)) {
 			Logger.log("InvokeExpr", stmt.getInvokeExpr(), "is not an InstanceInvokeExpr! D:");
@@ -222,7 +215,7 @@ public class Verifier {
 	 * Finds all possible objects the robot could point to and performs an
 	 * intersection of the according intervals
 	 */
-	private static Interval getCurrentConstraints(JInvokeStmt invoke, PAG pointsTo, HashMap<Value, Interval> originalConstraints) {
+	private static Interval getCurrentConstraints(JInvokeStmt invoke, PAG pointsTo) {
 		// Get all possible references
 		Value robot = getCallee(invoke);
 		VarNode robotNode = pointsTo.findLocalVarNode(robot);
@@ -249,7 +242,7 @@ public class Verifier {
 		Interval intervalIntersected = new Interval();
 		intervalIntersected.setTop();
 		for(Value robotName : rootReferencePointers){
-			Interval interval = originalConstraints.get(robotName);
+			Interval interval = robotConstraints.get(robotName);
 			intervalIntersected = intersectInterval(intervalIntersected, interval);
 		}
 
