@@ -1,6 +1,10 @@
 
 public class Test_Reassigning {
 	
+	public Test_Reassigning() {
+		
+	}
+	
 	public static void testEasy() {
 		Robot r1 = new Robot(-40, 10);
 		Robot r2 = new Robot(39, 50);

@@ -32,7 +32,8 @@ public class UnitTests {
 				{"Test_2", true, true},
 				{"Test_3", false, true},
 				{"Test_WhileAndBreak", false, true},
-				{"Test_CrashJRE", true, true}
+				{"Test_CrashJRE", true, true},
+				{"Test_ArgOverlap", true, true}
 		};
 		return Arrays.asList(data);
 	}
