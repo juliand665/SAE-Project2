@@ -35,18 +35,12 @@ public class Verifier {
 			
 			Logger.log();
 			
-			Analysis analysis = new Analysis(new BriefUnitGraph(method.retrieveActiveBody()), c);
-			analysis.run();
-			
-			Logger.log();
-
-			PatchingChain<Unit> ops = method.getActiveBody().getUnits();
-			parseRobotInitializations(ops);
+			Verifier verifier = new Verifier(method.retrieveActiveBody(), c, pointsToAnalysis);
 			
 			if (continueAfterFailure || weldAtOK)
-				weldAtOK = weldAtOK && verifyCallsTo("weldAt", ops, analysis, pointsToAnalysis);
+				weldAtOK = weldAtOK && verifier.verifyCallsTo("weldAt");
 			if (continueAfterFailure || weldBetweenOK)
-				weldBetweenOK = weldBetweenOK && verifyCallsTo("weldBetween", ops, analysis, pointsToAnalysis);
+				weldBetweenOK = weldBetweenOK && verifier.verifyCallsTo("weldBetween");
 		}
 
 		System.out.print(analyzedClass + " WELD_AT_");
@@ -56,10 +50,25 @@ public class Verifier {
 		System.out.println(weldBetweenOK ? "OK" : "NOT_OK");
 	}
 	
-	static HashMap<Value, Interval> robotConstraints;
+	private HashMap<Value, Interval> robotConstraints;
+	private PatchingChain<Unit> ops;
+	private Analysis fixPoint;
+	private PAG pointsTo;
+	
+	private Verifier(Body body, SootClass c, PAG pointsTo) {
+		this.pointsTo = pointsTo;
+		
+		fixPoint = new Analysis(new BriefUnitGraph(body), c);
+		fixPoint.run();
+		Logger.log();
+		
+		ops = body.getUnits();
+		
+		parseRobotInitializations(body.getUnits());
+	}
 
 	// analyzes all initialization of robots and saves them to robotContraints
-	private static void parseRobotInitializations(PatchingChain<Unit> ops) {
+	private void parseRobotInitializations(PatchingChain<Unit> ops) {
 		robotConstraints = new HashMap<Value, Interval>();
 		for (Unit op : ops) {
 			// search for initialization of the robot
@@ -79,18 +88,18 @@ public class Verifier {
 	}
 
 	// checks if all calls to the given method (weldAt/weldBetween) are valid
-	private static boolean verifyCallsTo(String methodName, PatchingChain<Unit> ops, Analysis fixPoint, PAG pointsTo) {
+	private boolean verifyCallsTo(String methodName) {
 		try {
 			Logger.log("Verifying", methodName + "...");
 
 			// search for all calls to the method
-			LinkedList<JInvokeStmt> invocations = getInvokeCalls(methodName, ops);
+			LinkedList<JInvokeStmt> invocations = getInvokeCalls(methodName);
 			if (invocations.isEmpty()) {
 				Logger.logIndenting(1, "No calls to", methodName);
 				return true;
 			}
 
-			return doArgsOfInvocationsLieWithinBounds(invocations, fixPoint, pointsTo);
+			return doArgsOfInvocationsLieWithinBounds(invocations);
 		} catch (Exception e) {
 			Logger.log("Returning false because I caught an exception:", e);
 			return false;
@@ -98,13 +107,13 @@ public class Verifier {
 	}
 
 	// checks if all the arguments used in weldAt/weldBetween lie within the respective constraints
-	private static boolean doArgsOfInvocationsLieWithinBounds(List<JInvokeStmt> invocations, Analysis fixPoint, PAG pointsTo) throws ApronException {
+	private boolean doArgsOfInvocationsLieWithinBounds(List<JInvokeStmt> invocations) throws ApronException {
 		final boolean verbose = true;
 		boolean constraintsViolated = false;
 		Logger.logIndenting(1, "Checking constraints...");
 
 		for (JInvokeStmt stmt : invocations) {
-			Interval bounds = getCurrentConstraints(stmt, pointsTo);
+			Interval bounds = getCurrentConstraints(stmt);
 			Texpr1Node lo = new Texpr1CstNode(bounds.inf);
 			Texpr1Node hi = new Texpr1CstNode(bounds.sup);
 			
@@ -120,12 +129,9 @@ public class Verifier {
 			for (Value arg : args) {
 				Texpr1Node expr = Analysis.toExpr(arg);
 				
-				if (verbose) {
-					Texpr1Intern inContext = new Texpr1Intern(state.get().getEnvironment(), expr);
-					Logger.logIndenting(4, "Possible values of", arg + ":\t", state.get().getBound(state.man, inContext));
-				}
+				if (verbose) Logger.logIndenting(4, "Possible values of", arg + ":\t", state.possibleValuesOf(expr));
 				
-				if (!isLessThan(lo, expr, false, state) || !isLessThan(expr, hi, false, state)) {
+				if (!state.isLessThan(lo, expr, false) || !state.isLessThan(expr, hi, false)) {
 					if (!verbose) return false;
 					constraintsViolated = true;
 					Logger.logConstraintViolation(arg + " might exceed robot bounds!");
@@ -133,40 +139,15 @@ public class Verifier {
 			}
 			
 			// check if, for weldBetween, arguments do not overlap
-			constraintsViolated = constraintsViolated || doArgsOverlap(args, state);
+			constraintsViolated = constraintsViolated || state.doArgsOverlap(args);
 			
 			Logger.log();
 		}
 		return !constraintsViolated;
 	}
-	
-	// checks if the arguments to weldBetween calls overlap (if applicable)
-	private static boolean doArgsOverlap(List<Value> args, AWrapper state) throws ApronException {
-		// only check for weldBetween
-		if (args.size() == 2 && !isLessThan(args.get(0), args.get(1), true, state)) {
-			Logger.logConstraintViolation("weldBetween arguments might overlap!");
-			return true;
-		}
-		return false;
-	}
-	
-	// convenient way of calling isLessThan(Texpr1Node…) with unparsed Soot Values
-	private static boolean isLessThan(Value l, Value r, boolean strict, AWrapper state) throws ApronException {
-		Texpr1Node lhs = Analysis.toExpr(l);
-		Texpr1Node rhs = Analysis.toExpr(r);
-		return isLessThan(lhs, rhs, strict, state);
-	}
-	
-	// checks if l is guaranteed to be less than r in the given state
-	private static boolean isLessThan(Texpr1Node l, Texpr1Node r, boolean strict, AWrapper state) throws ApronException {
-		Texpr1Node sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, r, l);
-		int op = strict ? Tcons1.SUP : Tcons1.SUPEQ;
-		Tcons1 constraint = new Tcons1(state.get().getEnvironment(), op, sub);
-		return state.get().satisfy(state.man, constraint);
-	}
 
 	// finds all invocations of a given method
-	private static LinkedList<JInvokeStmt> getInvokeCalls(String methodName, PatchingChain<Unit> ops) {
+	private LinkedList<JInvokeStmt> getInvokeCalls(String methodName) {
 		LinkedList<JInvokeStmt> stmts = new LinkedList<JInvokeStmt>();
 		for (Unit op : ops) {
 			if (op instanceof JInvokeStmt) {
@@ -179,7 +160,7 @@ public class Verifier {
 	}
 
 	// finds all possible objects the robot could point to and intersects the corresponding constraint intervals
-	private static Interval getCurrentConstraints(JInvokeStmt invoke, PAG pointsTo) {
+	private Interval getCurrentConstraints(JInvokeStmt invoke) {
 		Value robot = getCallee(invoke);
 		VarNode robotNode = pointsTo.findLocalVarNode(robot);
 
@@ -195,14 +176,14 @@ public class Verifier {
 		});
 		Logger.logIndenting(2, robotNode, "points to:", nums);*/
 
-		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode, pointsTo);
+		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode);
 		Logger.logIndenting(2, "Robot", robot, "references", rootReferencePointers);
 
 		// Intersect all possible constraint intervals, guaranteeing soundness at the cost of precision
 		Interval intersection = new Interval();
 		intersection.setTop();
 		for (Value robotName : rootReferencePointers)
-			intersection = intersectInterval(intersection, robotConstraints.get(robotName));
+			intersection = intersect(intersection, robotConstraints.get(robotName));
 		
 		if (intersection.isTop())
 			Logger.logIndenting(3, "Intersecting all possible constraints of", robot, "yielded", intersection, "(which is very likely wrong, causing unsoundness!)");
@@ -210,8 +191,26 @@ public class Verifier {
 		return intersection;
 	}
 
+	// recursively finds all references a node points to
+	private LinkedList<Value> findRootPointers(VarNode node) {
+		LinkedList<Value> referencePointers = new LinkedList<Value>();
+		Node[] pointerList = pointsTo.simpleInvLookup(node);
+
+		if (pointerList.length == 0) {
+			// Base case, node is already an object
+			LocalVarNode varNode = (LocalVarNode) node;
+			referencePointers.add((Value) varNode.getVariable());
+		} else {
+			// Node points to multiple references
+			for (Node n : pointerList)
+				referencePointers.addAll(0, findRootPointers((VarNode) n));
+		}
+
+		return referencePointers;
+	}
+
 	// can't believe there's no built-in for this
-	private static Interval intersectInterval(Interval i1, Interval i2) {
+	private static Interval intersect(Interval i1, Interval i2) {
 		Interval interval = new Interval(1.0, -1.0);
 
 		// Check if intervals are disjoint
@@ -231,24 +230,6 @@ public class Verifier {
 			interval.setSup(i2.sup);
 
 		return interval;
-	}
-
-	// recursively finds all references a node points to
-	private static LinkedList<Value> findRootPointers(VarNode node, PAG pointsTo) {
-		LinkedList<Value> referencePointers = new LinkedList<Value>();
-		Node[] pointerList = pointsTo.simpleInvLookup(node);
-
-		if (pointerList.length == 0) {
-			// Base case, node is already an object
-			LocalVarNode varNode = (LocalVarNode) node;
-			referencePointers.add((Value) varNode.getVariable());
-		} else {
-			// Node points to multiple references
-			for (Node n : pointerList)
-				referencePointers.addAll(0, findRootPointers((VarNode) n, pointsTo));
-		}
-
-		return referencePointers;
 	}
 
 	// extracts the constant int value out of a Soot Value (which is assumed to be an IntConstant)
