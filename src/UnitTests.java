@@ -29,11 +29,11 @@ public class UnitTests {
 		Object[][] data = new Object[][] { 
 				// TESTNAME, WELDAT, WELDBETWEEN
 				{"Test_1", true, true},
-				{"Test_2", true, true},
+				{"Test_2", true, true}, // too heavily over-approximated in practice
 				{"Test_3", false, true},
 				{"Test_WhileAndBreak", false, true},
 				{"Test_CrashJRE", true, true},
-				{"Test_ArgOverlap", true, true}
+				{"Test_ArgOverlap", true, true} // too heavily over-approximated in practice
 		};
 		return Arrays.asList(data);
 	}
