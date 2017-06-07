@@ -7,7 +7,6 @@ Because everyone loves java and having to work in a VM with 10 fps (using a mac)
 
 # To Do
 
-- Fix argument overlap detection, use expression of Polka instead of intervals (way too imprecise, see Test_ArgOverlap)
-- Fix crash for certain programs as inputs (see Test_CrashJRE)
-- Fix issue with equality in while statement (see Test_WhileAndBreak)
-- (Handle multiple robots (almost done))
+- Improve argument overlap detection, if possible
+- Use more abstract methods of PAG rather than the recursive stuff we're using right now for getCurrentConstraints
+- Fix issue with equality in while statement (see Test_WhileAndBreak) (not sure if this is still a problem)
