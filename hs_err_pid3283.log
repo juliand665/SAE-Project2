@@ -1,0 +1,461 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x6dcf0fdb, pid=3283, tid=3062401856
+#
+# JRE version: 6.0_45-b06
+# Java VM: Java HotSpot(TM) Server VM (20.45-b01 mixed mode linux-x86 )
+# Problematic frame:
+# C  [libpolkaMPQ.so+0x19fdb]  pk_widening+0x1eb
+#
+# If you would like to submit a bug report, please visit:
+#   http://java.sun.com/webapps/bugreport/crash.jsp
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0xb6705c00):  JavaThread "main" [_thread_in_native, id=3289, stack(0xb6838000,0xb6889000)]
+
+siginfo:si_signo=SIGSEGV: si_errno=0, si_code=1 (SEGV_MAPERR), si_addr=0x00000008
+
+Registers:
+EAX=0x00000000, EBX=0x6dcff000, ECX=0xb6700010, EDX=0x00000001
+ESP=0xb68872c8, EBP=0x6d87c0a8, ESI=0x00000001, EDI=0x6d8813d8
+EIP=0x6dcf0fdb, EFLAGS=0x00210286, CR2=0x00000008
+
+Top of Stack: (sp=0xb68872c8)
+0xb68872c8:   00000000 b67c1788 b70e2cc8 b6704ea0
+0xb68872d8:   b6705c00 6d8814b8 b6e9e711 b6705e58
+0xb68872e8:   b688737f 6d87c0a8 6d87c7d8 6e6ffc58
+0xb68872f8:   b6704ea0 b6704ea8 00000001 00000000
+0xb6887308:   6d881500 6d807988 6e74e268 b77117a2
+0xb6887318:   00000001 86b74300 00000001 00000005
+0xb6887328:   6dcf0df9 6dafe000 6d8813b8 6d807988
+0xb6887338:   6d87d0a0 6d9cc19f 6d807988 6d87c7d8 
+
+Instructions: (pc=0x6dcf0fdb)
+0x6dcf0fbb:   c6 8b 44 24 28 ff 70 14 ff 70 10 e8 d5 ad fe ff
+0x6dcf0fcb:   8b 6c 24 2c 89 44 24 48 83 c4 0c 8b 45 00 6a 00
+0x6dcf0fdb:   ff 70 08 8b 7c 24 30 8b 40 04 03 47 08 83 e8 01
+0x6dcf0feb:   50 e8 cf ae fe ff 8b 4c 24 48 83 c4 0c 89 01 6a 
+
+Register to memory mapping:
+
+EAX=0x00000000 is an unknown value
+EBX=0x6dcff000: <offset 0x28000> in /home/sae/apron/newpolka/libpolkaMPQ.so at 0x6dcd7000
+ECX=0xb6700010 is an unknown value
+EDX=0x00000001 is an unknown value
+ESP=0xb68872c8 is pointing into the stack for thread: 0xb6705c00
+EBP=0x6d87c0a8 is an unknown value
+ESI=0x00000001 is an unknown value
+EDI=0x6d8813d8 is an unknown value
+
+
+Stack: [0xb6838000,0xb6889000],  sp=0xb68872c8,  free space=316k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [libpolkaMPQ.so+0x19fdb]  pk_widening+0x1eb
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+j  apron.Abstract0.widening(Lapron/Manager;Lapron/Abstract0;)Lapron/Abstract0;+0
+j  apron.Abstract1.widening(Lapron/Manager;Lapron/Abstract1;)Lapron/Abstract1;+25
+j  ch.ethz.sae.Analysis.merge(Lsoot/Unit;Lch/ethz/sae/AWrapper;Lch/ethz/sae/AWrapper;Lch/ethz/sae/AWrapper;)V+76
+j  ch.ethz.sae.Analysis.merge(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V+18
+j  soot.toolkits.scalar.ForwardBranchedFlowAnalysis.doAnalysis()V+949
+j  ch.ethz.sae.Analysis.run()V+1
+j  ch.ethz.sae.Verifier.main([Ljava/lang/String;)V+104
+j  UnitTests.Test()V+23
+v  ~StubRoutines::call_stub
+j  sun.reflect.NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+0
+j  sun.reflect.NativeMethodAccessorImpl.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+87
+j  sun.reflect.DelegatingMethodAccessorImpl.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+6
+j  java.lang.reflect.Method.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+161
+j  org.junit.runners.model.FrameworkMethod$1.runReflectiveCall()Ljava/lang/Object;+15
+j  org.junit.internal.runners.model.ReflectiveCallable.run()Ljava/lang/Object;+1
+j  org.junit.runners.model.FrameworkMethod.invokeExplosively(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+10
+j  org.junit.internal.runners.statements.InvokeMethod.evaluate()V+12
+j  org.junit.internal.runners.statements.RunBefores.evaluate()V+49
+j  org.junit.runners.ParentRunner.runLeaf(Lorg/junit/runners/model/Statement;Lorg/junit/runner/Description;Lorg/junit/runner/notification/RunNotifier;)V+17
+j  org.junit.runners.BlockJUnit4ClassRunner.runChild(Lorg/junit/runners/model/FrameworkMethod;Lorg/junit/runner/notification/RunNotifier;)V+32
+j  org.junit.runners.BlockJUnit4ClassRunner.runChild(Ljava/lang/Object;Lorg/junit/runner/notification/RunNotifier;)V+6
+j  org.junit.runners.ParentRunner$3.run()V+12
+j  org.junit.runners.ParentRunner$1.schedule(Ljava/lang/Runnable;)V+1
+j  org.junit.runners.ParentRunner.runChildren(Lorg/junit/runner/notification/RunNotifier;)V+40
+j  org.junit.runners.ParentRunner.access$000(Lorg/junit/runners/ParentRunner;Lorg/junit/runner/notification/RunNotifier;)V+2
+j  org.junit.runners.ParentRunner$2.evaluate()V+8
+j  org.junit.runners.ParentRunner.run(Lorg/junit/runner/notification/RunNotifier;)V+20
+j  org.junit.runners.Suite.runChild(Lorg/junit/runner/Runner;Lorg/junit/runner/notification/RunNotifier;)V+2
+j  org.junit.runners.Suite.runChild(Ljava/lang/Object;Lorg/junit/runner/notification/RunNotifier;)V+6
+j  org.junit.runners.ParentRunner$3.run()V+12
+j  org.junit.runners.ParentRunner$1.schedule(Ljava/lang/Runnable;)V+1
+j  org.junit.runners.ParentRunner.runChildren(Lorg/junit/runner/notification/RunNotifier;)V+40
+j  org.junit.runners.ParentRunner.access$000(Lorg/junit/runners/ParentRunner;Lorg/junit/runner/notification/RunNotifier;)V+2
+j  org.junit.runners.ParentRunner$2.evaluate()V+8
+j  org.junit.runners.ParentRunner.run(Lorg/junit/runner/notification/RunNotifier;)V+20
+j  org.eclipse.jdt.internal.junit4.runner.JUnit4TestReference.run(Lorg/eclipse/jdt/internal/junit/runner/TestExecution;)V+72
+j  org.eclipse.jdt.internal.junit.runner.TestExecution.run([Lorg/eclipse/jdt/internal/junit/runner/ITestReference;)V+17
+j  org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests([Ljava/lang/String;Ljava/lang/String;Lorg/eclipse/jdt/internal/junit/runner/TestExecution;)V+61
+j  org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.runTests(Lorg/eclipse/jdt/internal/junit/runner/TestExecution;)V+10
+j  org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.run()V+70
+j  org.eclipse.jdt.internal.junit.runner.RemoteTestRunner.main([Ljava/lang/String;)V+14
+v  ~StubRoutines::call_stub
+
+---------------  P R O C E S S  ---------------
+
+Java Threads: ( => current thread )
+  0xb67fb000 JavaThread "ReaderThread" [_thread_in_native, id=3300, stack(0x6e74f000,0x6e7a0000)]
+  0xb679a000 JavaThread "Low Memory Detector" daemon [_thread_blocked, id=3298, stack(0x6e872000,0x6e8c3000)]
+  0xb6798400 JavaThread "C2 CompilerThread1" daemon [_thread_in_native, id=3297, stack(0x6e8c3000,0x6e944000)]
+  0xb6796400 JavaThread "C2 CompilerThread0" daemon [_thread_blocked, id=3296, stack(0x6e944000,0x6e9c5000)]
+  0xb6794c00 JavaThread "Signal Dispatcher" daemon [_thread_blocked, id=3295, stack(0x6e9c5000,0x6ea16000)]
+  0xb6786400 JavaThread "Finalizer" daemon [_thread_blocked, id=3294, stack(0x6ec16000,0x6ec67000)]
+  0xb6784c00 JavaThread "Reference Handler" daemon [_thread_blocked, id=3293, stack(0x6ef2e000,0x6ef7f000)]
+=>0xb6705c00 JavaThread "main" [_thread_in_native, id=3289, stack(0xb6838000,0xb6889000)]
+
+Other Threads:
+  0xb6781000 VMThread [stack: 0x6ef7f000,0x6f000000] [id=3292]
+  0xb679bc00 WatcherThread [stack: 0x6e7f1000,0x6e872000] [id=3299]
+
+VM state:not at safepoint (normal execution)
+
+VM Mutex/Monitor currently owned by a thread: None
+
+Heap
+ PSYoungGen      total 35584K, used 18596K [0x9e090000, 0xa05f0000, 0xb35e0000)
+  eden space 32896K, 48% used [0x9e090000,0x9f0197a0,0xa00b0000)
+  from space 2688K, 99% used [0xa0350000,0xa05efc00,0xa05f0000)
+  to   space 2688K, 0% used [0xa00b0000,0xa00b0000,0xa0350000)
+ PSOldGen        total 43712K, used 9006K [0x735e0000, 0x76090000, 0x9e090000)
+  object space 43712K, 20% used [0x735e0000,0x73eab880,0x76090000)
+ PSPermGen       total 16384K, used 8778K [0x6f5e0000, 0x705e0000, 0x735e0000)
+  object space 16384K, 53% used [0x6f5e0000,0x6fe72940,0x705e0000)
+
+Code Cache  [0xb36a5000, 0xb38e5000, 0xb66a5000)
+ total_blobs=239 nmethods=114 adapters=79 free_code_cache=49747776 largest_free_block=12032
+
+Dynamic libraries:
+08048000-08052000 r-xp 00000000 08:01 3409195    /opt/jdk1.6.0_45/bin/java
+08052000-08053000 rwxp 00009000 08:01 3409195    /opt/jdk1.6.0_45/bin/java
+08087000-0887d000 rwxp 00000000 00:00 0          [heap]
+6d800000-6d886000 rwxp 00000000 00:00 0 
+6d886000-6d900000 ---p 00000000 00:00 0 
+6d91b000-6d9a5000 r-xp 00000000 08:01 4462686    /usr/lib/i386-linux-gnu/libgmp.so.10.3.0
+6d9a5000-6d9a6000 r-xp 00089000 08:01 4462686    /usr/lib/i386-linux-gnu/libgmp.so.10.3.0
+6d9a6000-6d9a7000 rwxp 0008a000 08:01 4462686    /usr/lib/i386-linux-gnu/libgmp.so.10.3.0
+6d9a7000-6dafc000 r-xp 00000000 08:01 6165121    /home/sae/apron/apron/libapron.so
+6dafc000-6dafd000 ---p 00155000 08:01 6165121    /home/sae/apron/apron/libapron.so
+6dafd000-6dafe000 r-xp 00155000 08:01 6165121    /home/sae/apron/apron/libapron.so
+6dafe000-6db00000 rwxp 00156000 08:01 6165121    /home/sae/apron/apron/libapron.so
+6db00000-6dbe7000 rwxp 00000000 00:00 0 
+6dbe7000-6dc00000 ---p 00000000 00:00 0 
+6dc54000-6dcbf000 r-xp 00000000 08:01 4462983    /usr/lib/i386-linux-gnu/libmpfr.so.4.1.4
+6dcbf000-6dcc0000 r-xp 0006a000 08:01 4462983    /usr/lib/i386-linux-gnu/libmpfr.so.4.1.4
+6dcc0000-6dcc1000 rwxp 0006b000 08:01 4462983    /usr/lib/i386-linux-gnu/libmpfr.so.4.1.4
+6dcd7000-6dcfd000 r-xp 00000000 08:01 145087     /home/sae/apron/newpolka/libpolkaMPQ.so
+6dcfd000-6dcfe000 ---p 00026000 08:01 145087     /home/sae/apron/newpolka/libpolkaMPQ.so
+6dcfe000-6dcff000 r-xp 00026000 08:01 145087     /home/sae/apron/newpolka/libpolkaMPQ.so
+6dcff000-6dd00000 rwxp 00027000 08:01 145087     /home/sae/apron/newpolka/libpolkaMPQ.so
+6dd00000-6ddf0000 rwxp 00000000 00:00 0 
+6ddf0000-6de00000 ---p 00000000 00:00 0 
+6de00000-6decd000 rwxp 00000000 00:00 0 
+6decd000-6df00000 ---p 00000000 00:00 0 
+6df00000-6dffa000 rwxp 00000000 00:00 0 
+6dffa000-6e000000 ---p 00000000 00:00 0 
+6e000000-6e0ff000 rwxp 00000000 00:00 0 
+6e0ff000-6e100000 ---p 00000000 00:00 0 
+6e100000-6e1ff000 rwxp 00000000 00:00 0 
+6e1ff000-6e200000 ---p 00000000 00:00 0 
+6e200000-6e300000 rwxp 00000000 00:00 0 
+6e300000-6e3ff000 rwxp 00000000 00:00 0 
+6e3ff000-6e400000 ---p 00000000 00:00 0 
+6e413000-6e42f000 r-xp 00000000 08:01 6165182    /home/sae/apron/octagons/liboctD.so
+6e42f000-6e430000 r-xp 0001b000 08:01 6165182    /home/sae/apron/octagons/liboctD.so
+6e430000-6e431000 rwxp 0001c000 08:01 6165182    /home/sae/apron/octagons/liboctD.so
+6e431000-6e43d000 r-xp 00000000 08:01 145173     /home/sae/apron/box/libboxD.so
+6e43d000-6e43e000 r-xp 0000b000 08:01 145173     /home/sae/apron/box/libboxD.so
+6e43e000-6e43f000 rwxp 0000c000 08:01 145173     /home/sae/apron/box/libboxD.so
+6e43f000-6e600000 rwxp 00000000 00:00 0 
+6e600000-6e700000 rwxp 00000000 00:00 0 
+6e706000-6e72d000 r-xp 00000000 08:01 145195     /home/sae/apron/japron/libjgmp.so
+6e72d000-6e72e000 r-xp 00026000 08:01 145195     /home/sae/apron/japron/libjgmp.so
+6e72e000-6e72f000 rwxp 00027000 08:01 145195     /home/sae/apron/japron/libjgmp.so
+6e72f000-6e74d000 r-xp 00000000 08:01 145196     /home/sae/apron/japron/libjapron.so
+6e74d000-6e74e000 r-xp 0001d000 08:01 145196     /home/sae/apron/japron/libjapron.so
+6e74e000-6e74f000 rwxp 0001e000 08:01 145196     /home/sae/apron/japron/libjapron.so
+6e74f000-6e752000 ---p 00000000 00:00 0 
+6e752000-6e7a0000 rwxp 00000000 00:00 0 
+6e7a0000-6e7f1000 r-xs 005b1000 08:01 5917942    /home/sae/project2/soot-2.5.0.jar
+6e7f1000-6e7f2000 ---p 00000000 00:00 0 
+6e7f2000-6e872000 rwxp 00000000 00:00 0 
+6e872000-6e875000 ---p 00000000 00:00 0 
+6e875000-6e8c3000 rwxp 00000000 00:00 0 
+6e8c3000-6e8c6000 ---p 00000000 00:00 0 
+6e8c6000-6e944000 rwxp 00000000 00:00 0 
+6e944000-6e947000 ---p 00000000 00:00 0 
+6e947000-6e9c5000 rwxp 00000000 00:00 0 
+6e9c5000-6e9c8000 ---p 00000000 00:00 0 
+6e9c8000-6ea16000 rwxp 00000000 00:00 0 
+6ea16000-6ec16000 r-xp 00000000 08:01 4465853    /usr/lib/locale/locale-archive
+6ec16000-6ec19000 ---p 00000000 00:00 0 
+6ec19000-6ec67000 rwxp 00000000 00:00 0 
+6ec67000-6ee00000 r-xs 03087000 08:01 3407875    /opt/jdk1.6.0_45/jre/lib/rt.jar
+6ee00000-6eefd000 rwxp 00000000 00:00 0 
+6eefd000-6ef00000 ---p 00000000 00:00 0 
+6ef03000-6ef12000 r-xs 00667000 08:01 3408674    /opt/jdk1.6.0_45/jre/lib/charsets.jar
+6ef12000-6ef19000 r-xs 00096000 08:01 3407961    /opt/jdk1.6.0_45/jre/lib/jsse.jar
+6ef19000-6ef2d000 r-xp 00000000 08:01 3407925    /opt/jdk1.6.0_45/jre/lib/i386/libnet.so
+6ef2d000-6ef2e000 rwxp 00013000 08:01 3407925    /opt/jdk1.6.0_45/jre/lib/i386/libnet.so
+6ef2e000-6ef31000 ---p 00000000 00:00 0 
+6ef31000-6ef7f000 rwxp 00000000 00:00 0 
+6ef7f000-6ef80000 ---p 00000000 00:00 0 
+6ef80000-6f000000 rwxp 00000000 00:00 0 
+6f000000-6f021000 rwxp 00000000 00:00 0 
+6f021000-6f100000 ---p 00000000 00:00 0 
+6f105000-6f10d000 r-xs 00115000 08:01 3408017    /opt/jdk1.6.0_45/jre/lib/resources.jar
+6f10d000-6f113000 r-xs 00036000 08:01 1443578    /home/sae/eclipse/plugins/org.junit_4.11.0.v201303080030/junit.jar
+6f113000-6f147000 rwxp 00000000 00:00 0 
+6f147000-6f148000 ---p 00000000 00:00 0 
+6f148000-6f1c8000 rwxp 00000000 00:00 0 
+6f1c8000-6f1c9000 ---p 00000000 00:00 0 
+6f1c9000-6f251000 rwxp 00000000 00:00 0 
+6f251000-6f269000 rwxp 00000000 00:00 0 
+6f269000-6f27f000 rwxp 00000000 00:00 0 
+6f27f000-6f3bf000 rwxp 00000000 00:00 0 
+6f3bf000-6f3c7000 rwxp 00000000 00:00 0 
+6f3c7000-6f3df000 rwxp 00000000 00:00 0 
+6f3df000-6f3f5000 rwxp 00000000 00:00 0 
+6f3f5000-6f534000 rwxp 00000000 00:00 0 
+6f534000-6f548000 rwxp 00000000 00:00 0 
+6f548000-6f5df000 rwxp 00000000 00:00 0 
+6f5df000-705e0000 rwxp 00000000 00:00 0 
+705e0000-735e0000 rwxp 00000000 00:00 0 
+735e0000-76090000 rwxp 00000000 00:00 0 
+76090000-9e090000 rwxp 00000000 00:00 0 
+9e090000-a05f0000 rwxp 00000000 00:00 0 
+a05f0000-b35e0000 rwxp 00000000 00:00 0 
+b35e5000-b35ee000 rwxp 00000000 00:00 0 
+b35ee000-b36a5000 rwxp 00000000 00:00 0 
+b36a5000-b38e5000 rwxp 00000000 00:00 0 
+b38e5000-b66a5000 rwxp 00000000 00:00 0 
+b66a5000-b66b0000 r-xp 00000000 08:01 6030737    /lib/i386-linux-gnu/libnss_files-2.23.so
+b66b0000-b66b1000 r-xp 0000a000 08:01 6030737    /lib/i386-linux-gnu/libnss_files-2.23.so
+b66b1000-b66b2000 rwxp 0000b000 08:01 6030737    /lib/i386-linux-gnu/libnss_files-2.23.so
+b66b2000-b66b8000 rwxp 00000000 00:00 0 
+b66b8000-b66c3000 r-xp 00000000 08:01 6030747    /lib/i386-linux-gnu/libnss_nis-2.23.so
+b66c3000-b66c4000 r-xp 0000a000 08:01 6030747    /lib/i386-linux-gnu/libnss_nis-2.23.so
+b66c4000-b66c5000 rwxp 0000b000 08:01 6030747    /lib/i386-linux-gnu/libnss_nis-2.23.so
+b66c5000-b66cd000 r-xp 00000000 08:01 6030733    /lib/i386-linux-gnu/libnss_compat-2.23.so
+b66cd000-b66ce000 r-xp 00007000 08:01 6030733    /lib/i386-linux-gnu/libnss_compat-2.23.so
+b66ce000-b66cf000 rwxp 00008000 08:01 6030733    /lib/i386-linux-gnu/libnss_compat-2.23.so
+b66cf000-b66e6000 r-xp 00000000 08:01 6030731    /lib/i386-linux-gnu/libnsl-2.23.so
+b66e6000-b66e7000 r-xp 00016000 08:01 6030731    /lib/i386-linux-gnu/libnsl-2.23.so
+b66e7000-b66e8000 rwxp 00017000 08:01 6030731    /lib/i386-linux-gnu/libnsl-2.23.so
+b66e8000-b66ea000 rwxp 00000000 00:00 0 
+b66ef000-b66fe000 r-xp 00000000 08:01 3407921    /opt/jdk1.6.0_45/jre/lib/i386/libzip.so
+b66fe000-b6700000 rwxp 0000e000 08:01 3407921    /opt/jdk1.6.0_45/jre/lib/i386/libzip.so
+b6700000-b67ff000 rwxp 00000000 00:00 0 
+b67ff000-b6800000 ---p 00000000 00:00 0 
+b6800000-b6803000 r-xs 00013000 08:01 3407971    /opt/jdk1.6.0_45/jre/lib/jce.jar
+b6803000-b6805000 r-xs 0000c000 08:01 269812     /home/sae/eclipse/plugins/org.hamcrest.core_1.3.0.v201303031735.jar
+b6805000-b6806000 r-xs 00003000 08:01 145200     /home/sae/apron/japron/gmp.jar
+b6806000-b6808000 r-xs 00013000 08:01 145201     /home/sae/apron/japron/apron.jar
+b6808000-b6809000 r-xp 00739000 08:01 4465853    /usr/lib/locale/locale-archive
+b6809000-b682d000 r-xp 00000000 08:01 3407917    /opt/jdk1.6.0_45/jre/lib/i386/libjava.so
+b682d000-b682f000 rwxp 00023000 08:01 3407917    /opt/jdk1.6.0_45/jre/lib/i386/libjava.so
+b682f000-b6836000 r-xp 00000000 08:01 6030792    /lib/i386-linux-gnu/librt-2.23.so
+b6836000-b6837000 r-xp 00006000 08:01 6030792    /lib/i386-linux-gnu/librt-2.23.so
+b6837000-b6838000 rwxp 00007000 08:01 6030792    /lib/i386-linux-gnu/librt-2.23.so
+b6838000-b683b000 ---p 00000000 00:00 0 
+b683b000-b6889000 rwxp 00000000 00:00 0 
+b6889000-b68dc000 r-xp 00000000 08:01 6030710    /lib/i386-linux-gnu/libm-2.23.so
+b68dc000-b68dd000 r-xp 00052000 08:01 6030710    /lib/i386-linux-gnu/libm-2.23.so
+b68dd000-b68de000 rwxp 00053000 08:01 6030710    /lib/i386-linux-gnu/libm-2.23.so
+b68de000-b7093000 r-xp 00000000 08:01 3407905    /opt/jdk1.6.0_45/jre/lib/i386/server/libjvm.so
+b7093000-b70e7000 rwxp 007b5000 08:01 3407905    /opt/jdk1.6.0_45/jre/lib/i386/server/libjvm.so
+b70e7000-b7507000 rwxp 00000000 00:00 0 
+b7507000-b76b6000 r-xp 00000000 08:01 6030640    /lib/i386-linux-gnu/libc-2.23.so
+b76b6000-b76b7000 ---p 001af000 08:01 6030640    /lib/i386-linux-gnu/libc-2.23.so
+b76b7000-b76b9000 r-xp 001af000 08:01 6030640    /lib/i386-linux-gnu/libc-2.23.so
+b76b9000-b76ba000 rwxp 001b1000 08:01 6030640    /lib/i386-linux-gnu/libc-2.23.so
+b76ba000-b76bd000 rwxp 00000000 00:00 0 
+b76bd000-b76c0000 r-xp 00000000 08:01 6030664    /lib/i386-linux-gnu/libdl-2.23.so
+b76c0000-b76c1000 r-xp 00002000 08:01 6030664    /lib/i386-linux-gnu/libdl-2.23.so
+b76c1000-b76c2000 rwxp 00003000 08:01 6030664    /lib/i386-linux-gnu/libdl-2.23.so
+b76c2000-b76c9000 r-xp 00000000 08:01 3407919    /opt/jdk1.6.0_45/jre/lib/i386/jli/libjli.so
+b76c9000-b76cb000 rwxp 00006000 08:01 3407919    /opt/jdk1.6.0_45/jre/lib/i386/jli/libjli.so
+b76cb000-b76e4000 r-xp 00000000 08:01 6030784    /lib/i386-linux-gnu/libpthread-2.23.so
+b76e4000-b76e5000 r-xp 00018000 08:01 6030784    /lib/i386-linux-gnu/libpthread-2.23.so
+b76e5000-b76e6000 rwxp 00019000 08:01 6030784    /lib/i386-linux-gnu/libpthread-2.23.so
+b76e6000-b76e8000 rwxp 00000000 00:00 0 
+b76e8000-b76f0000 rwxs 00000000 08:01 2359323    /tmp/hsperfdata_sae/3283
+b76f0000-b76f1000 rwxp 00000000 00:00 0 
+b76f1000-b76f2000 r-xp 00000000 00:00 0 
+b76f2000-b76fd000 r-xp 00000000 08:01 3407916    /opt/jdk1.6.0_45/jre/lib/i386/libverify.so
+b76fd000-b76fe000 rwxp 0000b000 08:01 3407916    /opt/jdk1.6.0_45/jre/lib/i386/libverify.so
+b76fe000-b7700000 rwxp 00000000 00:00 0 
+b7700000-b7702000 r--p 00000000 00:00 0          [vvar]
+b7702000-b7703000 r-xp 00000000 00:00 0          [vdso]
+b7703000-b7725000 r-xp 00000000 08:01 6030612    /lib/i386-linux-gnu/ld-2.23.so
+b7725000-b7726000 rwxp 00000000 00:00 0 
+b7726000-b7727000 r-xp 00022000 08:01 6030612    /lib/i386-linux-gnu/ld-2.23.so
+b7727000-b7728000 rwxp 00023000 08:01 6030612    /lib/i386-linux-gnu/ld-2.23.so
+bfd9e000-bfdc0000 rwxp 00000000 00:00 0          [stack]
+
+VM Arguments:
+jvm_args: -Dfile.encoding=UTF-8 
+java_command: org.eclipse.jdt.internal.junit.runner.RemoteTestRunner -version 3 -port 40910 -testLoaderClass org.eclipse.jdt.internal.junit4.runner.JUnit4TestLoader -loaderpluginname org.eclipse.jdt.junit4.runtime -classNames UnitTests
+Launcher Type: SUN_STANDARD
+
+Environment Variables:
+JAVA_HOME=/opt/java-latest
+PATH=/opt/java-latest/bin:/home/sae/eclipse/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+LD_LIBRARY_PATH=/opt/jdk1.6.0_45/jre/lib/i386/server:/opt/jdk1.6.0_45/jre/lib/i386:/opt/jdk1.6.0_45/jre/../lib/i386:/opt/jdk1.6.0_45/jre/lib/i386/client:/opt/jdk1.6.0_45/jre/lib/i386:/home/sae/apron/box:/home/sae/apron/octagons:/home/sae/apron/newpolka:/home/sae/apron/apron:/home/sae/apron/japron:/home/sae/apron/japron/gmp
+SHELL=/bin/bash
+DISPLAY=:0
+
+Signal Handlers:
+SIGSEGV: [libjvm.so+0x7285f0], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGBUS: [libjvm.so+0x7285f0], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGFPE: [libjvm.so+0x5e21c0], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGPIPE: [libjvm.so+0x5e21c0], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGXFSZ: [libjvm.so+0x5e21c0], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGILL: [libjvm.so+0x5e21c0], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGUSR1: SIG_DFL, sa_mask[0]=0x00000000, sa_flags=0x00000000
+SIGUSR2: [libjvm.so+0x5e5420], sa_mask[0]=0x00000004, sa_flags=0x10000004
+SIGHUP: [libjvm.so+0x5e5000], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGINT: [libjvm.so+0x5e5000], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGTERM: [libjvm.so+0x5e5000], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+SIGQUIT: [libjvm.so+0x5e5000], sa_mask[0]=0x7ffbfeff, sa_flags=0x10000004
+
+
+---------------  S Y S T E M  ---------------
+
+OS:stretch/sid
+
+uname:Linux 4.4.0-22-generic #39-Ubuntu SMP Thu May 5 16:52:40 UTC 2016 i686
+libc:glibc 2.23 NPTL 2.23 
+rlimit: STACK 8192k, CORE 0k, NPROC 64508, NOFILE 65536, AS infinity
+load average:0.10 0.08 0.13
+
+/proc/meminfo:
+MemTotal:        8292420 kB
+MemFree:         6515552 kB
+MemAvailable:    7270716 kB
+Buffers:           41692 kB
+Cached:           749116 kB
+SwapCached:            0 kB
+Active:          1279056 kB
+Inactive:         403012 kB
+Active(anon):     892180 kB
+Inactive(anon):    25052 kB
+Active(file):     386876 kB
+Inactive(file):   377960 kB
+Unevictable:          32 kB
+Mlocked:              32 kB
+HighTotal:       7475144 kB
+HighFree:        5957080 kB
+LowTotal:         817276 kB
+LowFree:          558472 kB
+SwapTotal:       3142652 kB
+SwapFree:        3142652 kB
+Dirty:                64 kB
+Writeback:             0 kB
+AnonPages:        893388 kB
+Mapped:           188976 kB
+Shmem:             25976 kB
+Slab:              44612 kB
+SReclaimable:      29172 kB
+SUnreclaim:        15440 kB
+KernelStack:        3800 kB
+PageTables:         9224 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:     7288860 kB
+Committed_AS:    3836928 kB
+VmallocTotal:     122880 kB
+VmallocUsed:           0 kB
+VmallocChunk:          0 kB
+AnonHugePages:    555008 kB
+CmaTotal:              0 kB
+CmaFree:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+DirectMap4k:       40952 kB
+DirectMap2M:      872448 kB
+
+
+CPU:total 2 (2 cores per cpu, 1 threads per core) family 6 model 94 stepping 3, cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt
+
+/proc/cpuinfo:
+processor	: 0
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 94
+model name	: Intel(R) Core(TM) i7-6700HQ CPU @ 2.60GHz
+stepping	: 3
+cpu MHz		: 2592.000
+cache size	: 6144 KB
+physical id	: 0
+siblings	: 2
+core id		: 0
+cpu cores	: 2
+apicid		: 0
+initial apicid	: 0
+fdiv_bug	: no
+f00f_bug	: no
+coma_bug	: no
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht nx rdtscp constant_tsc xtopology nonstop_tsc pni pclmulqdq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm abm 3dnowprefetch rdseed clflushopt
+bugs		:
+bogomips	: 5184.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+processor	: 1
+vendor_id	: GenuineIntel
+cpu family	: 6
+model		: 94
+model name	: Intel(R) Core(TM) i7-6700HQ CPU @ 2.60GHz
+stepping	: 3
+cpu MHz		: 2592.000
+cache size	: 6144 KB
+physical id	: 0
+siblings	: 2
+core id		: 1
+cpu cores	: 2
+apicid		: 1
+initial apicid	: 1
+fdiv_bug	: no
+f00f_bug	: no
+coma_bug	: no
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 22
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht nx rdtscp constant_tsc xtopology nonstop_tsc pni pclmulqdq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm abm 3dnowprefetch rdseed clflushopt
+bugs		:
+bogomips	: 5184.00
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 39 bits physical, 48 bits virtual
+power management:
+
+
+
+Memory: 4k page, physical 8292420k(6515552k free), swap 3142652k(3142652k free)
+
+vm_info: Java HotSpot(TM) Server VM (20.45-b01) for linux-x86 JRE (1.6.0_45-b06), built on Mar 26 2013 13:50:03 by "java_re" with gcc 3.2.1-7a (J2SE release)
+
+time: Thu Jun  1 12:51:17 2017
+elapsed time: 1 seconds
+
