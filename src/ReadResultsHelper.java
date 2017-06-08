@@ -8,10 +8,9 @@ import org.apache.commons.io.FileUtils;
 public class ReadResultsHelper {
 	public static void main(String[] args) {
 		
-		File folder = new File("src/TestCases");
+		File folder = new File("src/temporary");
 		File[] listOfFiles = folder.listFiles();
 		Arrays.sort(listOfFiles);
-		
 		int numOfFiles = listOfFiles.length;
 		
 		boolean solutions[][] = new boolean[numOfFiles][2];
@@ -19,9 +18,10 @@ public class ReadResultsHelper {
 		String codeLines = "";
 		
 		for(int i = 0; i < numOfFiles; i++){
-			solutions[i] = getExpectedSolutionFromFile("src/" + listOfFiles[i].getName());
+			String name = listOfFiles[i].getName();
+			solutions[i] = getExpectedSolutionFromFile("src/" + name);
 			//{"Test_1", true, true},
-			codeLines += "{\"" + listOfFiles[i].getName().substring(0, listOfFiles[i].getName().length()-5) + "\"," + solutions[i][0] + ", " + solutions[i][0] + "}, \n";
+			codeLines += "{\"" + listOfFiles[i].getName().substring(0, listOfFiles[i].getName().length()-5) + "\"," + solutions[i][0] + ", " + solutions[i][1] + "}, \n";
 		}
 		
 		System.out.println(codeLines);
