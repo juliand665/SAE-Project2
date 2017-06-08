@@ -8,10 +8,7 @@ import soot.jimple.*;
 import soot.jimple.internal.*;
 import soot.jimple.spark.SparkTransformer;
 import soot.jimple.spark.pag.*;
-import soot.jimple.spark.sets.DoublePointsToSet;
-import soot.jimple.spark.sets.HybridPointsToSet;
-import soot.jimple.spark.sets.P2SetVisitor;
-import soot.jimple.spark.sets.PointsToSetInternal;
+import soot.jimple.spark.sets.*;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class Verifier {

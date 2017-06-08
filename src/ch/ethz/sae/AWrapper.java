@@ -58,6 +58,7 @@ public class AWrapper {
 		// only check for weldBetween
 		if (args.size() == 2 && !isLessThan(args.get(0), args.get(1), true)) {
 			Logger.logConstraintViolation("weldBetween arguments might overlap!");
+			Logger.logIndenting(4, elem);
 			return true;
 		}
 		return false;
@@ -74,8 +75,13 @@ public class AWrapper {
 	boolean isLessThan(Texpr1Node l, Texpr1Node r, boolean strict) throws ApronException {
 		Texpr1Node sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, r, l);
 		int op = strict ? Tcons1.SUP : Tcons1.SUPEQ;
-		Tcons1 constraint = new Tcons1(elem.getEnvironment(), op, sub);
-		return elem.satisfy(man, constraint);
+		return satisfy(new Tcons1(elem.getEnvironment(), op, sub));
+	}
+	
+	// because Abstract1.satisfy is imprecise
+	boolean satisfy(Tcons1 constraint) throws ApronException {
+		// bottom satisfies everything
+		return elem.isBottom(man) || !elem.meetCopy(man, constraint).isBottom(man);
 	}
 	
 	// returns an interval approximating all possible values of the given expression

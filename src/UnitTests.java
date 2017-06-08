@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +18,53 @@ import ch.ethz.sae.Verifier;
 @RunWith(Parameterized.class)
 public class UnitTests {
 
+	// The output that's printed to the console.
+	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+	private PrintStream stdOut;
+	
+	@Before
+	public void setup() {
+		stdOut = System.out;
+		System.setOut(new PrintStream(outContent));
+	}
+
+	@Test
+	public void test() {
+		// The correct results of weldAt and weldBetween
+		boolean expectedWeldAt = mExpWeldAt;
+		boolean expectedWeldBetween = mExpWeldBet;
+		String[] nameOfTest = { mNameOfClass };
+
+		while (true) // sometimes there are weird errors (which are hopefully not our fault) that resolve upon retrying
+			try {
+				outContent.reset();
+				
+				// run the Verifier
+				Verifier.main(nameOfTest);
+
+				// split up the output
+				String[] lines = outContent.toString().split("\n");
+				stdOut.print(outContent);
+
+				boolean actualWeldAt = false;
+				if (lines[lines.length - 2].equals(mNameOfClass + " WELD_AT_OK"))
+					actualWeldAt = true;
+
+				boolean actualWeldBetween = false;
+				if (lines[lines.length - 1].equals(mNameOfClass + " WELD_BETWEEN_OK"))
+					actualWeldBetween = true;
+
+				// assert precision
+				assertTrue("\nWELD_AT FAILED:", !expectedWeldAt || actualWeldAt);
+				assertTrue("\nWELD_BETWEEN FAILED:", !expectedWeldBetween || actualWeldBetween);
+
+				// error on unsoundness
+				if (expectedWeldAt && !actualWeldAt || expectedWeldBetween && !actualWeldBetween)
+					throw new RuntimeException("UNSOUND!");
+				break;
+			} catch (Exception e) {}
+	}
+
 	@Parameter(0)
 	public String mNameOfClass;
 	@Parameter(1)
@@ -26,7 +74,7 @@ public class UnitTests {
 
 	@Parameters(name = "{0}")
 	public static Collection<Object[]> data() {
-		Object[][] data = new Object[][] {
+		final Object[][] data = new Object[][] {
 				// TESTNAME, WELDAT, WELDBETWEEN
 				{"TestAliasing",true, true}, 
 				{"TestAssignmentStmtEdge",true, true}, 
@@ -213,50 +261,4 @@ public class UnitTests {
 		};
 		return Arrays.asList(data);
 	}
-
-	
-	@Before
-	public void setup() {
-		stdOut = System.out;
-		System.setOut(new PrintStream(outContent));
-	}
-
-	// The output that's printed to the console.
-	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-	private PrintStream stdOut;
-	
-	@Test
-	public void test() {
-		// The correct results of weldAt and weldBetween
-		boolean expectedWeldAt = mExpWeldAt;
-		boolean expectedWeldBetween = mExpWeldBet;
-		String[] nameOfTest = { mNameOfClass };
-
-		// run the Verifier
-		for (int attempt = 0; attempt < 5; attempt++) // sometimes there are weird errors (which are hopefully not our fault) that resolve upon retrying
-			try {
-				Verifier.main(nameOfTest);
-				break;
-			} catch (Exception e) {}
-
-		// split up the output
-		String[] lines = outContent.toString().split("\n");
-		stdOut.print(outContent);
-
-		boolean actualWeldAt = false;
-		if (lines[lines.length - 2].equals(mNameOfClass + " WELD_AT_OK"))
-			actualWeldAt = true;
-
-		boolean actualWeldBetween = false;
-		if (lines[lines.length - 1].equals(mNameOfClass + " WELD_BETWEEN_OK"))
-			actualWeldBetween = true;
-
-		assertTrue("\nWELD_AT FAILED:", !expectedWeldAt || actualWeldAt);
-		assertTrue("\nWELD_BETWEEN FAILED:", !expectedWeldBetween || actualWeldBetween);
-		//assertEquals("\nWELD_AT FAILED:", expectedWeldAt, actualWeldAt);
-		//assertEquals("\nWELD_BETWEEN FAILED:", expectedWeldBetween, actualWeldBetween);
-		if (expectedWeldAt && !actualWeldAt || expectedWeldBetween && !actualWeldBetween)
-			throw new RuntimeException("UNSOUND!");
-	}
-
 }
