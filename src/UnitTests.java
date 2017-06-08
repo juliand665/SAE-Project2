@@ -26,7 +26,7 @@ public class UnitTests {
 
 	@Parameters(name = "{0}")
 	public static Collection<Object[]> data() {
-		Object[][] data = new Object[][] { 
+		Object[][] data = new Object[][] {
 				// TESTNAME, WELDAT, WELDBETWEEN
 				{"TestAliasing",true, true}, 
 				{"TestAssignmentStmtEdge",true, true}, 

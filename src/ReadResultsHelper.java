@@ -19,7 +19,7 @@ public class ReadResultsHelper {
 		String codeLines = "";
 		
 		for(int i = 0; i < numOfFiles; i++){
-			solutions[i] = getExpectedSolutionFromFile("src/TestCases/" + listOfFiles[i].getName());
+			solutions[i] = getExpectedSolutionFromFile("src/" + listOfFiles[i].getName());
 			//{"Test_1", true, true},
 			codeLines += "{\"" + listOfFiles[i].getName().substring(0, listOfFiles[i].getName().length()-5) + "\"," + solutions[i][0] + ", " + solutions[i][0] + "}, \n";
 		}

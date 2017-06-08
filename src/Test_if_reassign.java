@@ -1,3 +1,5 @@
+// WELD_AT_OK
+// WELD_BETWEEN_OK
 public class Test_if_reassign {
 	/*
 	 *  yields:
