@@ -191,14 +191,23 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		boolean negated = cond instanceof JNeExpr || cond instanceof JLeExpr || cond instanceof JLtExpr; // !=, <=, <
 		if (verbose) Logger.log("=", equality, "//", "</>", strict, "//", "!", negated);
 
-		// convert to constraints for un-/fulfilment
-		Tcons1 tCons = toConstraint(l, r, equality, strict, negated);
-		Tcons1 fCons = toConstraint(l, r, equality, !strict, !negated);
-		if (verbose) Logger.log("true:", tCons, "//", "false:", fCons);
-
-		// apply to state
-		branch.meet(man, tCons);
-		fall.meet(man, fCons);
+		// apply constraints for un-/fulfillment
+		applyConstraint(branch, l, r, equality, strict, negated);
+		applyConstraint(fall, l, r, equality, !strict, !negated);
+	}
+	
+	// wraps around toConstraint (applying it) with special handling for inequality
+	static void applyConstraint(Abstract1 state, Texpr1Node l, Texpr1Node r, boolean equality, boolean strict, boolean negated) throws ApronException {
+		if (equality && negated) {
+			// special handling for inequality, because polyhedra are imprecise for it
+			Abstract1 copy = new Abstract1(man, state);
+			applyConstraint(state, l, r, false, true, false);
+			applyConstraint(copy, l, r, false, true, true);
+			state.join(man, copy);
+		} else {
+			// handle everything else normally
+			state.meet(man, toConstraint(l, r, equality, strict, negated));
+		}
 	}
 
 	// converts an (in-)equality of a given type to a Tcons1 linear constraint (e.g. l >= r -> l-r >= 0; l < r -> r-l > 0 -> r-l-1 >= 0)
