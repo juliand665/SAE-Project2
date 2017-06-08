@@ -207,7 +207,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		Texpr1BinNode sub = new Texpr1BinNode(Texpr1BinNode.OP_SUB, negated ? r : l, negated ? l : r);
 		int cons;
 		if (equality)
-			cons = negated ? Tcons1.DISEQ : Tcons1.EQ; // TODO better inequality handlingsa
+			cons = negated ? Tcons1.DISEQ : Tcons1.EQ; // TODO better inequality handling
 		else
 			cons = strict ? Tcons1.SUP : Tcons1.SUPEQ;
 		// something not to be confused by: SUP is just SUPEQ with the bound adjusted by one
@@ -217,19 +217,18 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	@Override
 	protected void flowThrough(AWrapper in, Unit op,
 			List<AWrapper> fallOut, List<AWrapper> branchOut) {
-		final boolean verbose = false;
+		final boolean verbose = true;
 
 		Stmt s = (Stmt) op;
 
 		// debug output
+		Logger.logIndenting(1, op);
 		if (verbose)
 			try {
-				Logger.logIndenting(1, op, "-----", in, "->", fallOut, "+", branchOut);
+				Logger.logIndenting(2, "In:", in);
 			} catch (Exception e) {
 				Logger.log("Error while trying to log:", e);
 			}
-		else
-			Logger.logIndenting(1, op);
 
 		try {
 			Abstract1 fall = new Abstract1(man, in.get());
@@ -253,7 +252,10 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 			for (AWrapper out : branchOut)
 				out.set(branch);
 
-			if (verbose) Logger.logIndenting(2, "Fall through:", fallOut, "Branch:", branchOut);
+			if (verbose) {
+				Logger.logIndenting(2, "Fall through: ", fallOut);
+				Logger.logIndenting(2, "Branch:       ", branchOut);
+			}
 
 		} catch (ApronException e) {
 			if (verbose) Logger.log("ApronException in flowThrough:", e);
