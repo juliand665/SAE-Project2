@@ -11,6 +11,7 @@ import soot.jimple.spark.pag.*;
 import soot.jimple.spark.sets.DoublePointsToSet;
 import soot.jimple.spark.sets.HybridPointsToSet;
 import soot.jimple.spark.sets.P2SetVisitor;
+import soot.jimple.spark.sets.PointsToSetInternal;
 import soot.toolkits.graph.BriefUnitGraph;
 
 public class Verifier {
@@ -165,21 +166,15 @@ public class Verifier {
 		VarNode robotNode = pointsTo.findLocalVarNode(robot);
 
 		/* TODO use this
-		DoublePointsToSet allocs = (DoublePointsToSet) pointsTo.reachingObjects((Local) robot);
-		final List<Integer> nums = new ArrayList<Integer>();
-		allocs.forall(new P2SetVisitor() {
-			public void visit(Node n) {
-				if (n instanceof AllocNode) {
-					nums.add(n.getNumber());
-				}
-			}
-		});
-		Logger.logIndenting(2, robotNode, "points to:", nums);*/
+		PointsToSetInternal allocs = (PointsToSetInternal) pointsTo.reachingObjects((Local) robot);
+		List<Integer> nums = getNumbers(allocs);
+		Logger.logIndenting(2, robotNode, "points to:", nums, Arrays.toString(pointsTo.allocInvLookup(robotNode)));
+		*/
 
 		LinkedList<Value> rootReferencePointers = findRootPointers(robotNode);
 		Logger.logIndenting(2, "Robot", robot, "references", rootReferencePointers);
 
-		// Intersect all possible constraint intervals, guaranteeing soundness at the cost of precision
+		// Intersect all possible constraint intervals, preserving soundness at the cost of precision
 		Interval intersection = new Interval();
 		intersection.setTop();
 		for (Value robotName : rootReferencePointers)
@@ -230,6 +225,19 @@ public class Verifier {
 			interval.setSup(i2.sup);
 
 		return interval;
+	}
+	
+	// returns all the numbers of nodes in a PointsToSetInternal
+	private static List<Integer> getNumbers(PointsToSetInternal pts) {
+		final List<Integer> nums = new ArrayList<Integer>();
+		pts.forall(new P2SetVisitor() {
+			public void visit(Node n) {
+				if (n instanceof AllocNode) {
+					nums.add(n.getNumber());
+				}
+			}
+		});
+		return nums;
 	}
 
 	// extracts the constant int value out of a Soot Value (which is assumed to be an IntConstant)
