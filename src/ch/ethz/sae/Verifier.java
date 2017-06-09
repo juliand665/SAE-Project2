@@ -36,9 +36,9 @@ public class Verifier {
 			Verifier verifier = new Verifier(method.retrieveActiveBody(), c, pointsToAnalysis);
 			
 			if (continueAfterFailure || weldAtOK)
-				weldAtOK = weldAtOK && verifier.verifyCallsTo("weldAt");
+				weldAtOK = verifier.verifyCallsTo("weldAt") && weldAtOK;
 			if (continueAfterFailure || weldBetweenOK)
-				weldBetweenOK = weldBetweenOK && verifier.verifyCallsTo("weldBetween");
+				weldBetweenOK = verifier.verifyCallsTo("weldBetween") && weldBetweenOK;
 		}
 
 		System.out.print(analyzedClass + " WELD_AT_");
@@ -100,6 +100,7 @@ public class Verifier {
 			return doArgsOfInvocationsLieWithinBounds(invocations);
 		} catch (Exception e) {
 			Logger.log("Returning false because I caught an exception:", e);
+			//e.printStackTrace();
 			return false;
 		}
 	}
@@ -263,7 +264,7 @@ public class Verifier {
 	}
 
 	// performs points-to analysis
-	private static PAG doPointsToAnalysis(SootClass c) {
+	private synchronized static PAG doPointsToAnalysis(SootClass c) {
 		Scene.v().setEntryPoints(c.getMethods());
 
 		HashMap<String, String> options = new HashMap<String, String>();

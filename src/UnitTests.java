@@ -1,17 +1,15 @@
 import static org.junit.Assert.*;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.util.Arrays;
-import java.util.Collection;
+import java.io.*;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Before;
-import org.junit.Test;
+import javax.management.RuntimeErrorException;
+
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.runners.Parameterized.*;
 
 import ch.ethz.sae.Verifier;
 
@@ -19,13 +17,16 @@ import ch.ethz.sae.Verifier;
 public class UnitTests {
 
 	// The output that's printed to the console.
-	private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-	private PrintStream stdOut;
+	PrintStream stdOut;
 	
 	@Before
-	public void setup() {
+	public void before() {
 		stdOut = System.out;
-		System.setOut(new PrintStream(outContent));
+	}
+	
+	@After
+	public void after() {
+		System.setOut(stdOut);
 	}
 
 	@Test
@@ -35,34 +36,37 @@ public class UnitTests {
 		boolean expectedWeldBetween = mExpWeldBet;
 		String[] nameOfTest = { mNameOfClass };
 
+		ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+
 		while (true) // sometimes there are weird errors (which are hopefully not our fault) that resolve upon retrying
 			try {
 				outContent.reset();
 				
 				// run the Verifier
-				Verifier.main(nameOfTest);
+				System.setOut(new PrintStream(outContent));
+				Verifier.main(nameOfTest.clone());
 
 				// split up the output
 				String[] lines = outContent.toString().split("\n");
-				stdOut.print(outContent);
+				
+				stdOut.println(outContent);
+				stdOut.println("Penultimate: " + lines[lines.length - 2]);
 
-				boolean actualWeldAt = false;
-				if (lines[lines.length - 2].equals(mNameOfClass + " WELD_AT_OK"))
-					actualWeldAt = true;
-
-				boolean actualWeldBetween = false;
-				if (lines[lines.length - 1].equals(mNameOfClass + " WELD_BETWEEN_OK"))
-					actualWeldBetween = true;
-
-				// assert precision
-				assertTrue("\nWELD_AT FAILED:", !expectedWeldAt || actualWeldAt);
-				assertTrue("\nWELD_BETWEEN FAILED:", !expectedWeldBetween || actualWeldBetween);
+				boolean actualWeldAt = lines[lines.length - 2].equals(mNameOfClass + " WELD_AT_OK");
+				boolean actualWeldBetween = lines[lines.length - 1].equals(mNameOfClass + " WELD_BETWEEN_OK");
 
 				// error on unsoundness
-				if (expectedWeldAt && !actualWeldAt || expectedWeldBetween && !actualWeldBetween)
-					throw new RuntimeException("UNSOUND!");
+				if (!expectedWeldAt && actualWeldAt || !expectedWeldBetween && actualWeldBetween)
+					throw new IllegalArgumentException("FAILED DAMNS FUCKING INSOND ");
+
+				// assert precision
+				assertEquals("\nWELD_AT FAILED:" + expectedWeldAt + " " + actualWeldAt, expectedWeldAt, actualWeldAt);
+				assertEquals("\nWELD_BETWEEN FAILED:", expectedWeldBetween, actualWeldBetween);
 				break;
-			} catch (Exception e) {}
+			} catch (Exception e) {
+				System.setOut(stdOut);
+				e.printStackTrace();
+			}
 	}
 
 	@Parameter(0)

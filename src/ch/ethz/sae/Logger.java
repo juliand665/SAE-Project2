@@ -4,7 +4,7 @@ import apron.Interval;
 
 public class Logger {
 
-	public static final boolean LOG_DEBUG = true;
+	public static final boolean LOG_DEBUG = false;
 	public static final String INDENTATION = "  ";
 	
 	// helper function for debug output
