@@ -168,6 +168,7 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 		if (verbose) Logger.log("expr:", expr);
 
 		if (expr != null) {
+			Logger.log(expr);
 			Texpr1Intern val = new Texpr1Intern(env, expr); // value to assign
 			// apply to state
 			fall.assign(man, var, val, null);
@@ -226,13 +227,13 @@ public class Analysis extends ForwardBranchedFlowAnalysis<AWrapper> {
 	@Override
 	protected void flowThrough(AWrapper in, Unit op,
 			List<AWrapper> fallOut, List<AWrapper> branchOut) {
-		final boolean verbose = false;
+		final boolean verbose = true;
 
 		Stmt s = (Stmt) op;
 
 		// debug output
 		Logger.logIndenting(1, op);
-		if (verbose) Logger.logIndenting(2, "In:", in == null ? "null" : in.toString());
+		//if (verbose && in.get() != null) Logger.logIndenting(2, "In:", in);
 
 		try {
 			Abstract1 fall = new Abstract1(man, in.get());

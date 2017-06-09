@@ -1,5 +1,5 @@
 // WELD_AT_OK
-// WELD_BETWEEN_NOT_OK
+// WELD_BETWEEN_OK
 public class TestFromMailinglist {
 	public static void m(int j) {
 		Robot r = new Robot(-2, 6);

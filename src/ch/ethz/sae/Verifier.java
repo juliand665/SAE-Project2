@@ -100,7 +100,7 @@ public class Verifier {
 			return doArgsOfInvocationsLieWithinBounds(invocations);
 		} catch (Exception e) {
 			Logger.log("Returning false because I caught an exception:", e);
-			//e.printStackTrace();
+			e.printStackTrace();
 			return false;
 		}
 	}

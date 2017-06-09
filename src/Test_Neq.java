@@ -1,4 +1,4 @@
-// WELD_AT_NOT_OK
+// WELD_AT_OK
 // WELD_BETWEEN_OK
 public class Test_Neq {
 	public static void m1(int a) {

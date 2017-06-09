@@ -46,9 +46,8 @@ public class AWrapper {
                 return "<Top>";
 
             return elem.toString();
-        } catch (ApronException e) {
+        } catch (Exception e) {
             System.err.println("toString failed");
-            System.exit(-1);
         }
         return null;
     }
@@ -80,8 +79,12 @@ public class AWrapper {
 	
 	// because Abstract1.satisfy is imprecise
 	boolean satisfy(Tcons1 constraint) throws ApronException {
+		Logger.log(elem);
+		Logger.log(elem.meetCopy(man, constraint));
+		Logger.log(elem.isEqual(man, elem.meetCopy(man, constraint)));
+		Logger.log(constraint);
 		// bottom satisfies everything
-		return elem.isBottom(man) || !elem.meetCopy(man, constraint).isBottom(man);
+		return elem.isEqual(man, elem.meetCopy(man, constraint));
 	}
 	
 	// returns an interval approximating all possible values of the given expression

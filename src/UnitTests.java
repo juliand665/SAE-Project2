@@ -18,12 +18,12 @@ public class UnitTests {
 
 	// The output that's printed to the console.
 	PrintStream stdOut;
-	
+
 	@Before
 	public void before() {
 		stdOut = System.out;
 	}
-	
+
 	@After
 	public void after() {
 		System.setOut(stdOut);
@@ -38,35 +38,34 @@ public class UnitTests {
 
 		ByteArrayOutputStream outContent = new ByteArrayOutputStream();
 
+		outContent.reset();
+
+		// run the Verifier
+		System.setOut(new PrintStream(outContent));
 		while (true) // sometimes there are weird errors (which are hopefully not our fault) that resolve upon retrying
 			try {
-				outContent.reset();
-				
-				// run the Verifier
-				System.setOut(new PrintStream(outContent));
 				Verifier.main(nameOfTest.clone());
-
-				// split up the output
-				String[] lines = outContent.toString().split("\n");
-				
-				stdOut.println(outContent);
-				stdOut.println("Penultimate: " + lines[lines.length - 2]);
-
-				boolean actualWeldAt = lines[lines.length - 2].equals(mNameOfClass + " WELD_AT_OK");
-				boolean actualWeldBetween = lines[lines.length - 1].equals(mNameOfClass + " WELD_BETWEEN_OK");
-
-				// error on unsoundness
-				if (!expectedWeldAt && actualWeldAt || !expectedWeldBetween && actualWeldBetween)
-					throw new IllegalArgumentException("FAILED DAMNS FUCKING INSOND ");
-
-				// assert precision
-				assertEquals("\nWELD_AT FAILED:" + expectedWeldAt + " " + actualWeldAt, expectedWeldAt, actualWeldAt);
-				assertEquals("\nWELD_BETWEEN FAILED:", expectedWeldBetween, actualWeldBetween);
 				break;
 			} catch (Exception e) {
-				System.setOut(stdOut);
 				e.printStackTrace();
 			}
+
+		// split up the output
+		String[] lines = outContent.toString().split("\n");
+
+		stdOut.println(outContent);
+		stdOut.println("Penultimate: " + lines[lines.length - 2]);
+
+		boolean actualWeldAt = lines[lines.length - 2].equals(mNameOfClass + " WELD_AT_OK");
+		boolean actualWeldBetween = lines[lines.length - 1].equals(mNameOfClass + " WELD_BETWEEN_OK");
+
+		// error on unsoundness
+		if (!expectedWeldAt && actualWeldAt || !expectedWeldBetween && actualWeldBetween)
+			throw new RuntimeException("UNSOUND!");
+
+		// assert precision
+		assertEquals("\nWELD_AT FAILED:" + expectedWeldAt + " " + actualWeldAt, expectedWeldAt, actualWeldAt);
+		assertEquals("\nWELD_BETWEEN FAILED:", expectedWeldBetween, actualWeldBetween);
 	}
 
 	@Parameter(0)
@@ -88,7 +87,7 @@ public class UnitTests {
 				{"TestForLoopFail",false, false}, 
 				{"TestForLoopGotoStmt",true, true}, 
 				{"TestForLoopWidening",false, true}, 
-				{"TestFromMailinglist",true, false}, 
+				{"TestFromMailinglist",true, true}, 
 				{"TestIdentity",true, true}, 
 				{"TestIdentityFail",false, false}, 
 				{"TestIfStmtSimple",true, true}, 
@@ -104,7 +103,7 @@ public class UnitTests {
 				{"Test_2",true, true}, 
 				{"Test_3",true, true}, 
 				{"Test_4",true, true}, 
-				{"Test_5",false, false}, 
+				{"Test_5",true, false}, 
 				{"Test_5_LUKE",false, true}, 
 				{"Test_6",true, true}, 
 				{"Test_7",true, true}, 
@@ -116,6 +115,28 @@ public class UnitTests {
 				{"Test_Eq",true, true}, 
 				{"Test_ForLoop",false, true}, 
 				{"Test_For_1",true, false}, 
+				{"Test_Inequality",true, true}, 
+				{"Test_Large",true, true}, 
+				{"Test_Le_Ge",true, true}, 
+				{"Test_Loops",true, true}, 
+				{"Test_Lt_Gt",true, true}, 
+				{"Test_Many_Bots",true, true}, 
+				{"Test_MultipleRobots",true, true}, 
+				{"Test_Neq",true, true}, 
+				{"Test_Pointer_Galore",false, false}, 
+				{"Test_Pointer_If",true, true}, 
+				{"Test_Reassigning",false, true}, 
+				{"Test_SimpleReassignment",true, true}, 
+				{"Test_Strict_Interval",true, false}, 
+				{"Test_Unreachable",true, true}, 
+				{"Test_WeldBetween",true, true}, 
+				{"Test_WhileAndBreak",true, true}, 
+				{"Test_While_No_Widen_F",false, true}, 
+				{"Test_While_No_Widen_T",true, true}, 
+				{"Test_While_Widen_1",false, true}, 
+				{"Test_While_Widen_2",false, true}, 
+				{"Test_if_reassign",true, true}, 
+				{"Test_ok_forif",false, false}, 
 				{"Test_Generated_0_OK_OK_EQUAL",true, true}, 
 				{"Test_Generated_100_OK_OK_SMALLER_EQUAL",true, true}, 
 				{"Test_Generated_101_OK_OK_SMALLER_EQUAL",true, true}, 
@@ -239,29 +260,7 @@ public class UnitTests {
 				{"Test_Generated_97_OK_OK_SMALLER_EQUAL",true, true}, 
 				{"Test_Generated_98_NOT_OK_NOT_OK_SMALLER_EQUAL",false, false}, 
 				{"Test_Generated_99_OK_OK_SMALLER_EQUAL",true, true}, 
-				{"Test_Generated_9_NOT_OK_NOT_OK_EQUAL",false, false}, 
-				{"Test_Inequality",true, true}, 
-				{"Test_Large",true, true}, 
-				{"Test_Le_Ge",true, true}, 
-				{"Test_Loops",true, true}, 
-				{"Test_Lt_Gt",true, true}, 
-				{"Test_Many_Bots",true, true}, 
-				{"Test_MultipleRobots",true, true}, 
-				{"Test_Neq",false, true}, 
-				{"Test_Pointer_Galore",false, false}, 
-				{"Test_Pointer_If",true, true}, 
-				{"Test_Reassigning",false, true}, 
-				{"Test_SimpleReassignment",true, true}, 
-				{"Test_Strict_Interval",true, false}, 
-				{"Test_Unreachable",true, true}, 
-				{"Test_WeldBetween",true, true}, 
-				{"Test_WhileAndBreak",true, true}, 
-				{"Test_While_No_Widen_F",false, true}, 
-				{"Test_While_No_Widen_T",true, true}, 
-				{"Test_While_Widen_1",false, true}, 
-				{"Test_While_Widen_2",false, true}, 
-				{"Test_if_reassign",true, true}, 
-				{"Test_ok_forif",false, false}
+				{"Test_Generated_9_NOT_OK_NOT_OK_EQUAL",false, false}
 		};
 		return Arrays.asList(data);
 	}
